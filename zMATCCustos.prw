@@ -2592,8 +2592,10 @@ Static Function MATCProces(oFolder2)
 		cQuery := " SELECT B9_QINI, B9_VINI1 FROM "+RETSQLNAME("SB9")
 		cQuery += " WHERE B9_COD = '"+cProduto+"' "
 		If lCusfilA // Custo por Armazem
-			cQuery += "  AND B9_LOCAL='"+cLocal+"' AND B9_DATA = '"+DTOS(dUltFech)+"'"
-		ElseIf lCusfilF .Or. lCusfilE // Custo por Empresa ou Filial
+			cQuery += "  AND B9_LOCAL='"+cLocal+"' AND B9_DATA = '"+DTOS(dUltFech)+"' AND B9_FILIAL='"+xFilial("SB9")+"'"
+		ElseIf lCusfilF // Custo por Filial
+			cQuery += " AND B9_DATA <= '"+DTOS(dUltFech)+"'  AND B9_FILIAL='"+xFilial("SB9")+"'"
+		ElseIf lCusfilE // Custo por Empresa
 			cQuery += " AND B9_DATA <= '"+DTOS(dUltFech)+"'"
 		EndIf
 		cQuery += " AND "+RETSQLNAME("SB9")+".D_E_L_E_T_ = ' '"
@@ -3360,10 +3362,12 @@ Static Function MATCPCalc()
 		// Saldo Inicial
 		IncProc("Processando Saldo Inicial")
 		cQuery := " SELECT B9_FILIAL, B9_COD, B9_LOCAL, B9_VINI1, B9_QINI FROM "+RETSQLNAME("SB9")
-		cQuery += " WHERE B9_COD BETWEEN '"+cProdAnDe+"' AND '"+cProdAnAte+"' "
+		cQuery += " WHERE B9_COD BETWEEN '"+cProdAnDe+"' AND '"+cProdAnAte+"'"
 		If lCusfilA // Custo por Armazem
-			cQuery += "  AND B9_LOCAL BETWEEN '"+cLocAnDe+"' AND '"+cLocAnAte+"' AND B9_DATA = '"+DTOS(dFechAn)+"'"
-		ElseIf lCusfilF .Or. lCusfilE // Custo por Empresa ou Filial
+			cQuery += "  AND B9_LOCAL BETWEEN '"+cLocAnDe+"' AND '"+cLocAnAte+"' AND B9_DATA = '"+DTOS(dFechAn)+"' AND B9_FILIAL = '"+xFILIAL("SB9")+"' "
+		ElseIf lCusfilF // Custo por Filial
+			cQuery += " AND B9_DATA <= '"+DTOS(dFechAn)+"' AND B9_FILIAL = '"+xFILIAL("SB9")+"' "
+		ElseIf lCusfilE // Custo por Empresa
 			cQuery += " AND B9_DATA <= '"+DTOS(dFechAn)+"'"
 		EndIf
 		cQuery += " AND "+RETSQLNAME("SB9")+".D_E_L_E_T_ = ' '"
@@ -3579,7 +3583,7 @@ cCaminho  - Diretório para gravação
 @Return ( Nil )
 */
 //------------------------------------------------------------------------------------------
-Static Function MATCExprd(cNomeArq,cCaminho)
+Static Function MATCExprd(cNomeArq,cCaminho,oListBox,aInfPatc,lExpPatc)
 
 	Local cTexto	:= ""
 	Local nHandle	:= 0
