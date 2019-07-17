@@ -10,7 +10,7 @@
 #DEFINE _CRLF Chr(13) + Chr(10)
 
 //------------------------------------------------------------------------------------------
-/* {Protheus.doc} MATCCustos
+/* {Protheus.doc} zMATCCusto
 Monitor de Custos
 
 @author    Ronaldo Tapia
@@ -20,7 +20,7 @@ Monitor de Custos
 @Return ( Nil )
 */
 //------------------------------------------------------------------------------------------
-Function MATCCustos()
+USER Function zMATCCusto()
 
 	// Variáveis utilizadas na exportação do arquivo texto
 	Private aDadosAmb := {}
