@@ -2589,14 +2589,22 @@ Static Function MATCProces(oFolder2)
 
 		// Saldo Inicial
 		IncProc("Processando Saldo Inicial")
-		cQuery := " SELECT B9_QINI, B9_VINI1 FROM "+RETSQLNAME("SB9")
+		IF substr(cLocal,1,2) <> "**"
+			cQuery := " SELECT B9_QINI, B9_VINI1 FROM "+RETSQLNAME("SB9")
+		Else
+			cQuery := " SELECT SUM(B9_QINI) B9_QINI, SUM(B9_VINI1) B9_VINI1 FROM "+RETSQLNAME("SB9")
+			//cQuery := " SELECT B9_QINI, B9_VINI1 FROM "+RETSQLNAME("SB9")
+		ENDIF
 		cQuery += " WHERE B9_COD = '"+cProduto+"' "
 		If lCusfilA // Custo por Armazem
-			cQuery += "  AND B9_LOCAL='"+cLocal+"' AND B9_DATA = '"+DTOS(dUltFech)+"' AND B9_FILIAL='"+xFilial("SB9")+"'"
+			cQuery += " AND B9_LOCAL = '"+cLocal+"' AND B9_DATA = '"+DTOS(dUltFech)+"' AND B9_FILIAL='"+xFilial("SB9")+"' "
 		ElseIf lCusfilF // Custo por Filial
-			cQuery += " AND B9_DATA <= '"+DTOS(dUltFech)+"'  AND B9_FILIAL='"+xFilial("SB9")+"'"
+			IF substr(cLocal,1,2) <> "**"
+				cQuery += " AND B9_LOCAL = '"+cLocal+"' "
+			ENDIF
+			cQuery += " AND B9_DATA = '"+DTOS(dUltFech)+"' AND B9_FILIAL = '"+xFilial("SB9")+"'"
 		ElseIf lCusfilE // Custo por Empresa
-			cQuery += " AND B9_DATA <= '"+DTOS(dUltFech)+"'"
+			cQuery += " AND B9_DATA = '"+DTOS(dUltFech)+"'"
 		EndIf
 		cQuery += " AND "+RETSQLNAME("SB9")+".D_E_L_E_T_ = ' '"
 		cQuery := ChangeQuery(cQuery)
@@ -2631,9 +2639,9 @@ Static Function MATCProces(oFolder2)
 				cQuery += " AND D1_FILIAL = F4_FILIAL"
 			EndIf
 		ElseIf lCusfilF
-			cQuery += " AND D1_FILIAL='"+xFilial("SD1")+"' "
+			cQuery += " AND D1_FILIAL = '"+xFilial("SD1")+"'  AND F4_FILIAL = '"+xFilial("SF4")+"' "
 		ElseIf lCusfilA
-			cQuery += " AND D1_LOCAL='"+cLocal+"' "
+			cQuery += " AND D1_LOCAL='"+cLocal+"' AND F4_FILIAL = '"+xFilial("SF4")+"' "
 		EndIf
 		cQuery += " AND SD1.D_E_L_E_T_ = ' '"
 		cQuery += " AND SF4.D_E_L_E_T_ = ' '"
@@ -2757,10 +2765,19 @@ Static Function MATCProces(oFolder2)
 		IncProc("Processando Saldo Fechamento x Movimento")
 		DBSelectArea("SB2")
 		DBSetOrder(1)
-		If DBSeek(xFilial("SB2")+cProduto+cLocal)
-			nFecQtSB2 := SB2->B2_QFIM
-			nFecVlSB2 := SB2->B2_VFIM1
-		EndIf
+		IF SUBSTR(cLocal,1,2) <> "**"
+			If DBSeek(xFilial("SB2")+cProduto+cLocal)
+				nFecQtSB2 := SB2->B2_QFIM
+				nFecVlSB2 := SB2->B2_VFIM1
+			EndIf
+		ELSE
+			DBSeek(xFilial("SB2")+cProduto)
+			WHILE !EOF() .AND. SB2->B2_COD == cProduto
+				nFecQtSB2 += SB2->B2_QFIM
+				nFecVlSB2 += SB2->B2_VFIM1
+				DBSKIP()
+			ENDDO
+		ENDIF
 
 		// Processa as validações do fechamento
 		MATCValFec()
@@ -2828,7 +2845,11 @@ Static Function GetDatas(nOpc)
 
 	cQuery := "SELECT MAX(B9_DATA) AS B9_DATA FROM "+RETSQLNAME('SB9')+" WHERE B9_FILIAL='"+xFilial("SB9")+"' AND D_E_L_E_T_ <> '*'
 	If nOpc == 1
-		cQuery += " AND B9_LOCAL='"+cLocal+"' AND B9_COD = '"+cProduto+"' AND B9_DATA < '"+DTOS(dDtProces)+"'"
+		IF substr(cLocal,1,2) <> "**"
+			cQuery += " AND B9_LOCAL='"+cLocal+"' "
+		ENDIF
+
+		cQuery += " AND B9_COD = '"+cProduto+"' AND B9_DATA < '"+DTOS(dDtProces)+"'"
 	EndIf
 	cQuery := ChangeQuery(cQuery)
 	DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QrySB9",.F.,.T.)
