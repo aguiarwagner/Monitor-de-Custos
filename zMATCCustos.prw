@@ -2632,16 +2632,20 @@ Static Function MATCProces(oFolder2)
 		cQuery += " FROM "+RetSqlName("SD1")+" SD1,"+RetSqlName("SF4")+" SF4 "
 		cQuery += " WHERE D1_COD = '"+cProduto+"'
 		cQuery += " AND D1_ORIGLAN <> 'LF' AND D1_EMISSAO >= '"+DTOS(dDataI)+"' AND D1_EMISSAO <= '"+DTOS(dDataF)+"'"
-		cQuery += " AND D1_TES=F4_CODIGO AND F4_ESTOQUE = 'S'"
+		cQuery += " AND D1_TES=F4_CODIGO AND F4_ESTOQUE = 'S' AND F4_FILIAL = '"+xFilial("SF4")+"'"
 		//Complemento do Where da tabela SD1 (Tratamento Filial)
 		If lCusfilE
 			If FWModeAccess("SD1") == 'E' .AND. FWModeAccess("SF4") == 'E'
 				cQuery += " AND D1_FILIAL = F4_FILIAL"
 			EndIf
 		ElseIf lCusfilF
-			cQuery += " AND D1_FILIAL = '"+xFilial("SD1")+"'  AND F4_FILIAL = '"+xFilial("SF4")+"' "
+			IF SUBSTR(cLocal,1,2) <> "**"
+				cQuery += " AND D1_LOCAL = '"+cLocal+"' "
+			ENDIF
+				cQuery += " AND D1_FILIAL = '"+xFilial("SD1")+"' "
+
 		ElseIf lCusfilA
-			cQuery += " AND D1_LOCAL='"+cLocal+"' AND F4_FILIAL = '"+xFilial("SF4")+"' "
+			cQuery += " AND D1_LOCAL = '"+cLocal+"' "
 		EndIf
 		cQuery += " AND SD1.D_E_L_E_T_ = ' '"
 		cQuery += " AND SF4.D_E_L_E_T_ = ' '"
@@ -2659,16 +2663,19 @@ Static Function MATCProces(oFolder2)
 		cQuery += " FROM "+RetSqlName("SD2")+" SD2,"+RetSqlName("SF4")+" SF4 "
 		cQuery += " WHERE D2_COD = '"+cProduto+"'
 		cQuery += " AND D2_ORIGLAN <> 'LF' AND D2_EMISSAO >= '"+DTOS(dDataI)+"' AND D2_EMISSAO <= '"+DTOS(dDataF)+"'"
-		cQuery += " AND D2_TES=F4_CODIGO AND F4_ESTOQUE = 'S' "
+		cQuery += " AND D2_TES = F4_CODIGO AND F4_ESTOQUE = 'S' AND F4_FILIAL = '"+xFilial("SF4")+"'"
 		//Complemento do Where da tabela SD2 (Tratamento Filial)
 		If lCusfilE
 			If FWModeAccess("SD2") == 'E' .AND. FWModeAccess("SF4") == 'E'
 				cQuery += " AND D2_FILIAL = F4_FILIAL"
 			EndIf
 		ElseIf lCusfilF
-			cQuery += " AND D2_FILIAL='"+xFilial("SD2")+"' "
+		IF SUBSTR(cLocal,1,2) <> "**"
+				cQuery += " AND D2_LOCAL = '"+cLocal+"' "
+			ENDIF
+			cQuery += " AND D2_FILIAL = '"+xFilial("SD2")+"' "
 		ElseIf lCusfilA
-			cQuery += " AND D2_LOCAL='"+cLocal+"' "
+			cQuery += " AND D2_LOCAL = '"+cLocal+"' "
 		EndIf
 		cQuery += " AND SD2.D_E_L_E_T_ = ' '"
 		cQuery += " AND SF4.D_E_L_E_T_ = ' '"
@@ -2685,12 +2692,15 @@ Static Function MATCProces(oFolder2)
 		cQuery += " D3_CUSTO1 as CUSTO"
 		cQuery += " FROM "+RetSqlName("SD3")+" SD3 "
 		cQuery += " WHERE D3_COD = '"+cProduto+"'"
-		cQuery += " AND D3_ESTORNO=' ' AND D3_EMISSAO >= '"+DTOS(dDataI)+"' AND D3_EMISSAO <= '"+DTOS(dDataF)+"'"
+		cQuery += " AND D3_ESTORNO = ' ' AND D3_EMISSAO >= '"+DTOS(dDataI)+"' AND D3_EMISSAO <= '"+DTOS(dDataF)+"'"
 		//Complemento do Where da tabela SD3 (Tratamento Filial)
 		If lCusfilF
-			cQuery += " AND D3_FILIAL='"+xFilial("SD3")+"' "
+			IF SUBSTR(cLocal,1,2) <> "**"
+				cQuery += " AND D3_LOCAL = '"+cLocal+"' "
+			ENDIF
+			cQuery += " AND D3_FILIAL = '"+xFilial("SD3")+"' "
 		ElseIf lCusfilA
-			cQuery += " AND D3_LOCAL='"+cLocal+"' "
+			cQuery += " AND D3_LOCAL = '"+cLocal+"' "
 		EndIf
 		cQuery += " AND SD3.D_E_L_E_T_ = ' '"
 
@@ -2705,7 +2715,7 @@ Static Function MATCProces(oFolder2)
 
 		While Qrykdex->(!Eof())
 			// Verifico qual CFOP para incluir no array aKarLocal que será carregado no browser
-			If SUBSTRING(Qrykdex->CF,1,2) = 'PR' .Or. SUBSTRING(Qrykdex->CF,1,2) = 'DE' .Or. SUBSTRING(Qrykdex->CF,1,1) <= '5'
+			If SUBSTRING(Qrykdex->CF,1,2) = 'PR' .Or. SUBSTRING(Qrykdex->CF,1,2) = 'DE' .Or. SUBSTRING(Qrykdex->CF,1,1) < '5'
 				// Somatório das valores finais
 				nFecMovQt += Qrykdex->QUANT // Quantidade Fechamento x Movimento
 				nFecMovVl += Round(Qrykdex->CUSTO,aTamSD3[2]) // Valor Fechamento x Movimento
