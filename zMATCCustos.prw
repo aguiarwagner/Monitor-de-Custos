@@ -35,7 +35,7 @@ USER Function zMATCCusto()
 	Private oFolder2  := Nil
 	Private cProduto  := Space(15)
 	Private cDescr    := Space(40)
-	Private dUltFech  := dDataI := dDataF := CTOD("  /  /  ")
+	Private dUltFech  := dDataI := dDataF := CTOD("  /  /    ")
 	Private cLocal    := Space(02)
 	Private dDtProces := dDataBase
 	Private aKarLocal := {}
@@ -122,10 +122,10 @@ USER Function zMATCCusto()
 	Private cProdAnAte := Space(20)
 	Private cLocAnDe   := Space(02)
 	Private cLocAnAte  := Space(02)
-	Private dIniAn     := CTOD("  /  /  ")
-	Private dFimAn	   := CTOD("  /  /  ")
+	Private dIniAn     := CTOD("  /  /    ")
+	Private dFimAn	   := CTOD("  /  /    ")
 	Private oFather    := Nil
-	Private dFechAn	   := CTOD("  /  /  ")
+	Private dFechAn	   := CTOD("  /  /    ")
 	Private aProdAn    := {{'','','',''}}
 	Private oTempTable := Nil
 	Private lLogDec	   := .F.
@@ -2232,7 +2232,7 @@ Static Function FPanel04(oPanel)
 
 	Default oPanel     := Nil
 
-	AAdd(aKarLocal ,{CTOD("  /  /  "),Space(06),Space(02),Space(14),Space(06),Space(06),Space(06),Space(06),Space(06),Space(06),Space(06),Space(06),Space(06)})
+	AAdd(aKarLocal ,{CTOD("  /  /    "),Space(06),Space(02),Space(14),Space(06),Space(06),Space(06),Space(06),Space(06),Space(06),Space(06),Space(06),Space(06)})
 
 	DEFINE FONT oBold   NAME "Arial" SIZE 0, -12 BOLD
 	DEFINE FONT oBold1  NAME "Arial" SIZE 0, -12
@@ -2251,7 +2251,7 @@ Static Function FPanel04(oPanel)
 	@ 032,010 SAY "Local"                                   SIZE 040,10 PIXEL OF oPanel FONT oBold
 	@ 028,040 MSGET oVar   VAR cLocal Picture cPictLoc     	SIZE 030,10 PIXEL OF oPanel VALID(GetDatas(1))
 	@ 049,010 SAY "Limite"                                  SIZE 070,10 PIXEL OF oPanel FONT oBold
-	@ 045,040 MSGET oVar   VAR dDtProces Picture "99/99/99" SIZE 040,10 PIXEL OF oPanel VALID .T.
+	@ 045,040 MSGET oVar   VAR dDtProces Picture "99/99/9999" SIZE 040,10 PIXEL OF oPanel VALID .T.
 
 	@ 032,095 SAY "1 UM"                                    SIZE 070,10 PIXEL OF oPanel FONT oBold
 	@ 028,114 MSGET oVar   VAR c1UM      Picture "@!"       SIZE 015,10 PIXEL OF oPanel When .F.
@@ -2259,11 +2259,11 @@ Static Function FPanel04(oPanel)
 	@ 028,190 MSGET oVar   VAR c2UM      Picture "@!"       SIZE 015,10 PIXEL OF oPanel When .F.
 
 	@ 014,270 SAY "Ultimo Fechamento"                       SIZE 070,10 PIXEL OF oPanel FONT oBold
-	@ 010,330 MSGET oVar   VAR dUltFech  Picture "99/99/99" SIZE 040,10 PIXEL OF oPanel When .F.
+	@ 010,330 MSGET oVar   VAR dUltFech  Picture "99/99/9999" SIZE 040,10 PIXEL OF oPanel When .F.
 	@ 029,270 SAY "Data Inicial"                            SIZE 070,10 PIXEL OF oPanel FONT oBold
-	@ 025,330 MSGET oVar   VAR dDataI    Picture "99/99/99" SIZE 040,10 PIXEL OF oPanel When .F.
+	@ 025,330 MSGET oVar   VAR dDataI    Picture "99/99/9999" SIZE 040,10 PIXEL OF oPanel When .F.
 	@ 044,270 SAY "Data Final"                              SIZE 070,10 PIXEL OF oPanel FONT oBold
-	@ 040,330 MSGET oVar   VAR dDataF    Picture "99/99/99" SIZE 040,10 PIXEL OF oPanel VALID .T.
+	@ 040,330 MSGET oVar   VAR dDataF    Picture "99/99/9999" SIZE 040,10 PIXEL OF oPanel VALID .T.
 
 	@ 049,095 SAY "Lote"                                    SIZE 040,10 PIXEL OF oPanel FONT oBold
 	@ 045,114 MSGET oVar   VAR cCrlLot   Picture "@!"       SIZE 025,10 PIXEL OF oPanel When .F.
@@ -2528,10 +2528,10 @@ Static Function MATCProces(oFolder2)
 	// Zera valores do Kardex
 	aSize(aKarLocal, 0)
 
-	If Empty(dUltFech)
-		MsgAlert("Não foi realizada a virada de saldo para o produto " + Alltrim(cProduto) + ". Verifique!")
-		lRet := .F.
-	EndIf
+	//If Empty(dUltFech)
+		//MsgAlert("Não foi realizada a virada de saldo para o produto " + Alltrim(cProduto) + ". Verifique!")
+		//lRet := .F.
+	//EndIf
 
 	// Validações parâmetro MV_CUSFIL
 	If lRet .And. (!lCusfilA .And. !lCusfilF .And. !lCusfilE)
@@ -2779,6 +2779,9 @@ Static Function MATCProces(oFolder2)
 			If DBSeek(xFilial("SB2")+cProduto+cLocal)
 				nFecQtSB2 := SB2->B2_QFIM
 				nFecVlSB2 := SB2->B2_VFIM1
+			ELSE
+				MsgStop("Armazém '"+cLocal+"' não existe para este produto. Verifique!")
+				RETURN
 			EndIf
 		ELSE
 			DBSeek(xFilial("SB2")+cProduto)
@@ -2851,14 +2854,13 @@ Static Function GetDatas(nOpc)
 
 	Default nOpc   := 1
 
-	dDataI := CTOD("  /  /  ")
+	dDataI := CTOD("  /  /    ")
 
 	cQuery := "SELECT MAX(B9_DATA) AS B9_DATA FROM "+RETSQLNAME('SB9')+" WHERE B9_FILIAL='"+xFilial("SB9")+"' AND D_E_L_E_T_ <> '*'
 	If nOpc == 1
 		IF substr(cLocal,1,2) <> "**"
 			cQuery += " AND B9_LOCAL='"+cLocal+"' "
 		ENDIF
-
 		cQuery += " AND B9_COD = '"+cProduto+"' AND B9_DATA < '"+DTOS(dDtProces)+"'"
 	EndIf
 	cQuery := ChangeQuery(cQuery)
@@ -2874,7 +2876,9 @@ Static Function GetDatas(nOpc)
 	If !Empty(dUltFech)
 		dDataI := (dUltFech + 1)
 	Else
-		MsgAlert("Não foi realizada a virada de saldo para o produto " + cProduto + ". Verifique!")
+		// Se não encontrar a data do último fechamento pega do MV_ULMES, validação para produtos que tiveram saldo inicial com campo B9_DATA em branco
+		dDataI := SuperGetMV("MV_ULMES",.F.,"19961231",XFILIAl('SB9')) + 1
+		//MsgAlert("Não foi realizada a virada de saldo para o produto " + cProduto + ". Verifique!")
 	EndIf
 
 	QrySB9->(DBCloseArea())
