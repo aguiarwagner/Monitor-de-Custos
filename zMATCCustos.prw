@@ -2753,23 +2753,60 @@ Static Function MATCProces(oFolder2)
 
 		Enddo
 		Qrykdex->(DBCloseArea())
+		/*
+		// Saldo OP / Fechamento SC2
+		cQuery := "SELECT ISNULL(SUM(C2_VINI1),0) AS C2_VINI1, ISNULL(SUM(C2_VFIM1),0) AS C2_VFIM1 "
 
-		// Saldo OP / Fechamento
-		cQuery := " SELECT SUM(C2_VINI1) AS C2_VINI1, SUM(C2_VFIM1) AS C2_VFIM1 FROM "+RETSQLNAME("SC2")
-		cQuery += " WHERE C2_PRODUTO = '"+cProduto+"'"
-		cQuery += " AND C2_EMISSAO >= '"+DTOS(dDataI)+"' AND C2_EMISSAO <= '"+DTOS(dDataF)+"'"
-		//Complemento do Where da tabela SD2 (Tratamento Filial)
+		cQuery += "FROM "+RETSQLNAME("SC2")+" WHERE C2_PRODUTO = '"+cProduto+"'"
+
+		cQuery += " AND C2_EMISSAO <= '"+DTOS(dDataF)+"' AND (C2_DATRF = ' ' OR C2_DATRF >= '"+DTOS(dDataI)+"') "
+		//Complemento do Where da tabela SC2 (Tratamento Filial)
 		If lCusfilF
-			cQuery += " AND C2_FILIAL='"+xFilial("SC2")+"' "
+			IF substr(cLocal,1,2) <> "**"
+				cQuery += " AND C2_LOCAL = '"+cLocal+"' AND C2_FILIAL='"+xFilial("SC2")+"' "
+			ELSE
+				cQuery += " AND C2_FILIAL='"+xFilial("SC2")+"' "
+			ENDIF
 		ElseIf lCusfilA
 			cQuery += " AND C2_LOCAL='"+cLocal+"' "
 		EndIf
 		cQuery += " AND "+RETSQLNAME("SC2")+".D_E_L_E_T_ = ' '"
 		cQuery := ChangeQuery(cQuery)
 		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QrySC2",.F.,.T.)
-		nVlOpSB9    := QrySC2->C2_VINI1 // Valor inicial SB9
-		nFecVlOpSB2 := QrySC2->C2_VFIM1 // Valor final SB2
-		QrySC2->(DBCloseArea())
+		*/
+		/*
+		//Calcula as requisições contra a OP
+		cQuery2 := "SELECT SC2.C2_NUM + SC2.C2_ITEM + SC2.C2_SEQUEN AS OP, SC2.C2_VINI1 AS C2_VINI1, SC2.C2_VFIM1 AS C2_VFIM1, "
+		//Busca as requisições contra a OPs
+		cQuery2 += "((SELECT SUM(SD3.D3_CUSTO1) FROM SD3T10 AS SD3 "
+
+		cQuery2 += "WHERE SD3.D3_OP = (SC2.C2_NUM + SC2.C2_ITEM + SC2.C2_SEQUEN) "
+
+		cQuery2 += "AND SUBSTRING(SD3.D3_CF,1,2) IN ('RE') AND SD3.D3_ESTORNO = ' ' AND SD3.D_E_L_E_T_ = ' ') - "
+		//Subtrai os apontamentos da requuisições
+		cQuery2 += "(SELECT ISNULL(SUM(SD32.D3_CUSTO1),0) FROM SD3T10 AS SD32 "
+
+		cQuery2 += "WHERE SD32.D3_OP = (SC2.C2_NUM + SC2.C2_ITEM + SC2.C2_SEQUEN) "
+
+		cQuery2 += "AND SUBSTRING(SD32.D3_CF,1,2) IN ('PR') AND SD32.D3_ESTORNO = ' ' AND SD32.D_E_L_E_T_ = ' ' )) AS TotalMov "
+
+		cQuery2 += "FROM SC2T10 AS SC2 WHERE  SC2.C2_FILIAL = '"+xFilial("SC2")+"' AND SC2.D_E_L_E_T_ <> '*' "
+
+		cQuery2 += "AND SC2.C2_PRODUTO = '"+cProduto+"' AND SC2.C2_EMISSAO <= '"+DTOS(dDataF)+"' AND SC2.C2_DATRF = ' '"
+
+		cQuery := ChangeQuery(cQuery2)
+		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery2),"QrySC2MOV",.F.,.T.)
+		*/
+		// Chama a função para buscar o saldo das OPs
+
+		QrySC2MOV := VAlidOP(cProduto,cProduto,cLocal,dDataF)
+		//nVlOpSB9    := QrySC2->C2_VINI1 // Valor inicial SB9
+		//nFecVlOpSB2 := QrySC2->C2_VFIM1 // Valor final SB2
+
+		nVlOpSB9    := QrySC2MOV->C2_VINI1 // Valor inicial SB9
+		nFecVlOpSB2 := QrySC2MOV->C2_VFIM1 // Valor final SB2
+		nFecMovOp	:= QrySC2MOV->TotalMov //Total das requisições menos produções
+		QrySC2MOV->(DBCloseArea())
 
 		// Saldo Fechamento x Movimento
 		IncProc("Processando Saldo Fechamento x Movimento")
@@ -2936,7 +2973,10 @@ Static Function MATCValFec()
 
 	//Valida saldo em processo com OP encerrada
 	cQuery := " SELECT C2_TPOP, C2_DATRF, C2_QUJE, C2_QUANT, C2_VFIM1, C2_APRFIM1 FROM "+RETSQLNAME("SC2")
-	cQuery += " WHERE C2_FILIAL='"+xFilial("SC2")+"' AND C2_LOCAL='"+cLocal+"' AND "+RETSQLNAME("SC2")+".D_E_L_E_T_ <> '*' AND C2_PRODUTO = '"+cProduto+"'"
+	cQuery += " WHERE C2_FILIAL='"+xFilial("SC2")+"' AND "+RETSQLNAME("SC2")+".D_E_L_E_T_ <> '*' AND C2_PRODUTO = '"+cProduto+"'"
+	IF substr(cLocal,1,2) <> "**"
+				cQuery += " AND C2_LOCAL = '"+cLocal+"' "
+			ENDIF
 	cQuery += " AND C2_EMISSAO >= '"+DTOS(dDataI)+"' AND C2_EMISSAO <= '"+DTOS(dDataF)+"'"
 	cQuery := ChangeQuery(cQuery)
 	DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QryFSC2",.F.,.T.)
@@ -3755,3 +3795,48 @@ Static Function MATCValFoK()
 	oDlgValid:Activate(,,,.T.,,,)
 
 Return
+
+
+//------------------------------------------------------------------------------------------
+/* {Protheus.doc} VAlidOP
+@Valida as movimentações das OPs por produto e retorna quando encontra divergência nos fechamentos
+
+
+
+@author    Wagner Lima
+@version   12.1.17
+@since     29/07/2019
+@protected
+
+@Return (Retona array com OP divergente)
+*/
+//------------------------------------------------------------------------------------------
+Static Function VAlidOP(cProdini,cProdFim,cLocal, cDataFim)
+Local nProdProp  := SuperGetMV("MV_PRODPR0",.F.,1)
+LOCAL lseq300    := SuperGetMv('MV_SEQ300',.F.,.F.)
+Local cQuery2   := " "
+
+
+cQuery2 := "SELECT SC2.C2_NUM + SC2.C2_ITEM + SC2.C2_SEQUEN AS OP, SC2.C2_VINI1 AS C2_VINI1, SC2.C2_VFIM1 AS C2_VFIM1, "
+//Busca as requisições contra a OPs
+cQuery2 += "((SELECT SUM(SD3.D3_CUSTO1) FROM SD3T10 AS SD3
+
+cQuery2 += "WHERE SD3.D3_OP = (SC2.C2_NUM + SC2.C2_ITEM + SC2.C2_SEQUEN)
+
+cQuery2 += "AND SUBSTRING(SD3.D3_CF,1,2) IN ('RE') AND SD3.D3_ESTORNO = ' ' AND SD3.D_E_L_E_T_ = ' ') - "
+//Subtrai os apontamentos da requisições
+cQuery2 += "(SELECT ISNULL(SUM(SD32.D3_CUSTO1),0) FROM SD3T10 AS SD32
+
+cQuery2 += "WHERE SD32.D3_OP = (SC2.C2_NUM + SC2.C2_ITEM + SC2.C2_SEQUEN)
+
+cQuery2 += "AND SUBSTRING(SD32.D3_CF,1,2) IN ('PR') AND SD32.D3_ESTORNO = ' ' AND SD32.D_E_L_E_T_ = ' ' )) AS TotalMov
+
+cQuery2 += "FROM SC2T10 AS SC2 WHERE  SC2.C2_FILIAL = '"+xFilial("SC2")+"' AND SC2.D_E_L_E_T_ <> '*'
+
+cQuery2 += "AND SC2.C2_PRODUTO = '"+cProdini+"' AND SC2.C2_EMISSAO <= '"+DTOS(dDataF)+"' AND SC2.C2_DATRF = ' '
+
+cQuery2 := ChangeQuery(cQuery2)
+DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery2),"QrySC2MOV",.F.,.T.)
+
+
+Return (QrySC2MOV)
