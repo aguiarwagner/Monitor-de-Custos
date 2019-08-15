@@ -2483,7 +2483,8 @@ Static Function MATCProces(oFolder2)
 	Local aTamSD3  := TamSx3('D3_QUANT')
 	Local lRet     := .T.
 	Local nX	   := 0
-
+	Local nCont    := 0
+	Local aCusOp   := {}
 	// Zera variáveis da tela
 	nQtSB9      := 0
 	nVLSB9      := 0
@@ -2753,60 +2754,31 @@ Static Function MATCProces(oFolder2)
 
 		Enddo
 		Qrykdex->(DBCloseArea())
-		/*
-		// Saldo OP / Fechamento SC2
-		cQuery := "SELECT ISNULL(SUM(C2_VINI1),0) AS C2_VINI1, ISNULL(SUM(C2_VFIM1),0) AS C2_VFIM1 "
 
-		cQuery += "FROM "+RETSQLNAME("SC2")+" WHERE C2_PRODUTO = '"+cProduto+"'"
+		// Chama a função CalcCusOP para buscar o saldo das OPs
 
-		cQuery += " AND C2_EMISSAO <= '"+DTOS(dDataF)+"' AND (C2_DATRF = ' ' OR C2_DATRF >= '"+DTOS(dDataI)+"') "
-		//Complemento do Where da tabela SC2 (Tratamento Filial)
-		If lCusfilF
-			IF substr(cLocal,1,2) <> "**"
-				cQuery += " AND C2_LOCAL = '"+cLocal+"' AND C2_FILIAL='"+xFilial("SC2")+"' "
-			ELSE
-				cQuery += " AND C2_FILIAL='"+xFilial("SC2")+"' "
-			ENDIF
-		ElseIf lCusfilA
-			cQuery += " AND C2_LOCAL='"+cLocal+"' "
-		EndIf
-		cQuery += " AND "+RETSQLNAME("SC2")+".D_E_L_E_T_ = ' '"
-		cQuery := ChangeQuery(cQuery)
-		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QrySC2",.F.,.T.)
+		aCusOp := CalcCusOP(cProduto,cProduto,cLocal,dDataF)
+
+		//(QrySC2MOV)->(DbGotop())
+    // LAÇO DE REPETIÇÃO PARA MONTAR O ARRAY DO CABEÇALHO (SZO)
+	FOR nCont := 1 TO LEN(aCusOp)
+		nVlOpSB9    += aCusOp[nCont][2]
+		nFecVlOpSB2 += aCusOp[nCont][3]
+		nFecMovOp   += aCusOp[nCont][4]
+
+	NEXT nCont
+	/*
+        While ((QrySC2MOV)->(EOF()) == .F.)
+			nVlOpSB9    += (QrySC2MOV)->C2_VINI
+			nFecVlOpSB2 += (QrySC2MOV)->C2_VFIM // Valor final SB2
+			nFecMovOp	+= (QrySC2MOV)->TotalMov
+			(QrySC2MOV)->(DbSkip())
+		ENDDO// Valor inicial SB9
+		//nFecVlOpSB2 := QrySC2MOV->C2_VFIM1 // Valor final SB2
+		//nFecMovOp	:= QrySC2MOV->TotalMov //Total das requisições menos produções
+
 		*/
-		/*
-		//Calcula as requisições contra a OP
-		cQuery2 := "SELECT SC2.C2_NUM + SC2.C2_ITEM + SC2.C2_SEQUEN AS OP, SC2.C2_VINI1 AS C2_VINI1, SC2.C2_VFIM1 AS C2_VFIM1, "
-		//Busca as requisições contra a OPs
-		cQuery2 += "((SELECT SUM(SD3.D3_CUSTO1) FROM SD3T10 AS SD3 "
-
-		cQuery2 += "WHERE SD3.D3_OP = (SC2.C2_NUM + SC2.C2_ITEM + SC2.C2_SEQUEN) "
-
-		cQuery2 += "AND SUBSTRING(SD3.D3_CF,1,2) IN ('RE') AND SD3.D3_ESTORNO = ' ' AND SD3.D_E_L_E_T_ = ' ') - "
-		//Subtrai os apontamentos da requuisições
-		cQuery2 += "(SELECT ISNULL(SUM(SD32.D3_CUSTO1),0) FROM SD3T10 AS SD32 "
-
-		cQuery2 += "WHERE SD32.D3_OP = (SC2.C2_NUM + SC2.C2_ITEM + SC2.C2_SEQUEN) "
-
-		cQuery2 += "AND SUBSTRING(SD32.D3_CF,1,2) IN ('PR') AND SD32.D3_ESTORNO = ' ' AND SD32.D_E_L_E_T_ = ' ' )) AS TotalMov "
-
-		cQuery2 += "FROM SC2T10 AS SC2 WHERE  SC2.C2_FILIAL = '"+xFilial("SC2")+"' AND SC2.D_E_L_E_T_ <> '*' "
-
-		cQuery2 += "AND SC2.C2_PRODUTO = '"+cProduto+"' AND SC2.C2_EMISSAO <= '"+DTOS(dDataF)+"' AND SC2.C2_DATRF = ' '"
-
-		cQuery := ChangeQuery(cQuery2)
-		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery2),"QrySC2MOV",.F.,.T.)
-		*/
-		// Chama a função para buscar o saldo das OPs
-
-		QrySC2MOV := VAlidOP(cProduto,cProduto,cLocal,dDataF)
-		//nVlOpSB9    := QrySC2->C2_VINI1 // Valor inicial SB9
-		//nFecVlOpSB2 := QrySC2->C2_VFIM1 // Valor final SB2
-
-		nVlOpSB9    := QrySC2MOV->C2_VINI1 // Valor inicial SB9
-		nFecVlOpSB2 := QrySC2MOV->C2_VFIM1 // Valor final SB2
-		nFecMovOp	:= QrySC2MOV->TotalMov //Total das requisições menos produções
-		QrySC2MOV->(DBCloseArea())
+		//(QrySC2MOV)->(DBCloseArea())
 
 		// Saldo Fechamento x Movimento
 		IncProc("Processando Saldo Fechamento x Movimento")
@@ -3798,10 +3770,9 @@ Return
 
 
 //------------------------------------------------------------------------------------------
-/* {Protheus.doc} VAlidOP
-@Valida as movimentações das OPs por produto e retorna quando encontra divergência nos fechamentos
+/* {Protheus.doc} CalcCusOP
 
-
+@ Calcula o custo das OPs com base nas requisições e produções
 
 @author    Wagner Lima
 @version   12.1.17
@@ -3811,32 +3782,149 @@ Return
 @Return (Retona array com OP divergente)
 */
 //------------------------------------------------------------------------------------------
-Static Function VAlidOP(cProdini,cProdFim,cLocal, cDataFim)
-Local nProdProp  := SuperGetMV("MV_PRODPR0",.F.,1)
-LOCAL lseq300    := SuperGetMv('MV_SEQ300',.F.,.F.)
-Local cQuery2   := " "
+Static Function CalcCusOP(cProdini,cProdFim,cLocal, cDataFim)
+Local nProdProp  	:= SuperGetMV("MV_PRODPR0",.F.,1)
+LOCAL lseq300    	:= SuperGetMv('MV_SEQ300',.F.,.F.)
+Local cQuery     	:= " "
+Local cAlias     	:= " "
+Local cOpAnt     	:= ""
+Local nTotReq    	:= 0 //Total de requisições
+Local nTotProd   	:= 0 //Total de produções
+Local nMetAprop  	:= 2 // Metodo Apropriacao 1 = Sequencial / 2 = Mensal / 3 = Diaria
+Local nSC2Ini	 	:= 0
+Local nSC2Fin	 	:= 0
+Local nSc2Quant  	:= 0
+Local nCont      	:= 0
+Local nContProd  	:= 0
+Local FecVlOpSB2 	:= 0
+Local nVlOpSB9   	:= 0
+Local nCusOP	 	:= 0
+Local nQuantApont   := 0
+Local aStrut     	:= {}
+Local aSd3Prod   	:= {}
+Local aSd3Req    	:= {}
+Local aArrSc2    	:= {}
+Local aCusOp		:= {}
+Local oTable     	As Object
+DEFAULT cLocal   	:= "**"
+
+cQuery := "SELECT SC2.C2_FILIAL As C2_FILIAL, SC2.C2_NUM + SC2.C2_ITEM + SC2.C2_SEQUEN AS C2_OP, SC2.C2_VINI1 AS C2_VINI, SC2.C2_VFIM1 AS C2_VFIM, "
+
+cQuery += "SC2.C2_PRODUTO As C2_PROD, SC2.C2_QUANT AS C2_QUANT, SD3.D3_CF AS D3_CF, SD3.D3_CUSTO1 As D3_CUSTO, SD3.D3_EMISSAO As D3_EMISSAO, SD3.D3_NUMSEQ As D3_NUMSEQ, SD3.D3_QUANT As D3_QUANT, SD3.D3_PARCTOT AS D3_PARCTOT "
+
+cQuery += "FROM "+RetSqlName("SC2")+" AS SC2 JOIN "+RetSqlName("SD3")+" AS SD3 ON SC2.C2_NUM + SC2.C2_ITEM + SC2.C2_SEQUEN  = SD3.D3_OP "
+
+cQuery += "AND SC2.C2_FILIAL = '"+xFilial("SC2")+"' AND SC2.D_E_L_E_T_ <> '*' AND SD3.D3_FILIAL = '"+xFilial("SC2")+"' AND SD3.D_E_L_E_T_ <> '*' AND SD3.D3_ESTORNO = ' ' "
+
+cQuery += "AND SC2.C2_PRODUTO BETWEEN '"+cProdini+"' AND '"+cProdFim+"' AND SC2.C2_EMISSAO <= '"+DTOS(cDataFim)+"' AND SC2.C2_DATRF = ' ' "
+
+IF cLocal != "**"
+	cQuery += "AND SC2.C2_LOCAL = '"+cLocal+"'"
+END
+
+cQuery := ChangeQuery(cQuery)
+
+//Pega o próximo alias temporário disponível
+cAlias := GetNextAlias()
+oTable := FwTemporaryTable():New(cAlias)
+
+//Cria a estrutura dos campos da tabela temporária
+Aadd(aStrut, {"C2_FILIAL","C",TamSX3("C2_FILIAL")[1],0})
+Aadd(aStrut, {"C2_VINI","N",TamSX3("B2_CM1")[1],8})
+Aadd(aStrut, {"C2_VFIM","N",TamSX3("B2_CM1")[1],8})
+Aadd(aStrut, {"C2_PROD","C",TamSX3("B1_COD")[1],0})
+Aadd(aStrut, {"C2_OP","C",TamSX3("D3_OP")[1],0})
+Aadd(aStrut, {"C2_QUANT","N",TamSX3("C2_QUANT")[1],8})
+Aadd(aStrut, {"D3_CF","C",TamSX3("D3_CF")[1],0})
+Aadd(aStrut, {"D3_CUSTO","N",TamSX3("B2_CM1")[1],8})
+Aadd(aStrut, {"D3_EMISSAO","C",TamSX3("D3_EMISSAO")[1],0})
+Aadd(aStrut, {"D3_NUMSEQ","C",TamSX3("D3_NUMSEQ")[1],0})
+Aadd(aStrut, {"D3_QUANT","N",TamSX3("D3_QUANT")[1],8})
+Aadd(aStrut, {"D3_PARCTOT","C",TamSX3("D3_PARCTOT")[1],0})
 
 
-cQuery2 := "SELECT SC2.C2_NUM + SC2.C2_ITEM + SC2.C2_SEQUEN AS OP, SC2.C2_VINI1 AS C2_VINI1, SC2.C2_VFIM1 AS C2_VFIM1, "
-//Busca as requisições contra a OPs
-cQuery2 += "((SELECT SUM(SD3.D3_CUSTO1) FROM SD3T10 AS SD3
 
-cQuery2 += "WHERE SD3.D3_OP = (SC2.C2_NUM + SC2.C2_ITEM + SC2.C2_SEQUEN)
+oTable:SetFields(aStrut)
+//Cria  o índice temporário
+oTable:AddIndex("1", {"C2_FILIAL","C2_PROD","C2_OP"} )
+oTable:Create()
 
-cQuery2 += "AND SUBSTRING(SD3.D3_CF,1,2) IN ('RE') AND SD3.D3_ESTORNO = ' ' AND SD3.D_E_L_E_T_ = ' ') - "
-//Subtrai os apontamentos da requisições
-cQuery2 += "(SELECT ISNULL(SUM(SD32.D3_CUSTO1),0) FROM SD3T10 AS SD32
+SQLToTrb(cQuery, aStrut, cAlias)
+(cAlias)->(DbGotop())
+//DBCloseArea
+//cOpAnt := (cAlias)->C2_OP
+//oTable:GetRealName() RETONA A TABELA TEMPORÁRIA EM USO
+While ((cAlias)->(EOF()) == .F.) //.AND. (cAlias)->C2_OP == cOpAnt
 
-cQuery2 += "WHERE SD32.D3_OP = (SC2.C2_NUM + SC2.C2_ITEM + SC2.C2_SEQUEN)
+	cOpAnt    := (cAlias)->C2_OP
+	nSC2Ini   := (cAlias)->C2_VINI
+	nSC2Fin   := (cAlias)->C2_VFIM
+	nSc2Quant := (cAlias)->C2_QUANT
+	WHILE cOpAnt == (cAlias)->C2_OP
 
-cQuery2 += "AND SUBSTRING(SD32.D3_CF,1,2) IN ('PR') AND SD32.D3_ESTORNO = ' ' AND SD32.D_E_L_E_T_ = ' ' )) AS TotalMov
+			IF SUBSTR((cAlias)->D3_CF,1,2) $ "RE"
+				AADD(aSd3Req, {(cAlias)->D3_CUSTO, (cAlias)->D3_EMISSAO, (cAlias)->D3_NUMSEQ})
+				nTotReq  +=  (cAlias)->D3_CUSTO
 
-cQuery2 += "FROM SC2T10 AS SC2 WHERE  SC2.C2_FILIAL = '"+xFilial("SC2")+"' AND SC2.D_E_L_E_T_ <> '*'
+				//aArrSc2[nCOnt][2] += (cAlias)->D3_CUSTO
+			ELSEIF SUBSTR((cAlias)->D3_CF,1,2) $ "PR"
+				AADD(aSd3Prod, {(cAlias)->C2_OP,(cAlias)->D3_CUSTO, (cAlias)->D3_QUANT, (cAlias)->D3_NUMSEQ, (cAlias)->D3_PARCTOT})
+				nTotProd    +=  (cAlias)->D3_CUSTO
+				nQuantApont += (cAlias)->D3_QUANT
+				//aArrSc2[nCOnt][3] += (cAlias)->D3_CUSTO
+			END
 
-cQuery2 += "AND SC2.C2_PRODUTO = '"+cProdini+"' AND SC2.C2_EMISSAO <= '"+DTOS(dDataF)+"' AND SC2.C2_DATRF = ' '
 
-cQuery2 := ChangeQuery(cQuery2)
-DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery2),"QrySC2MOV",.F.,.T.)
+		(cAlias)->(DbSkip())
+	ENDDO
+	//AADD(aArrSc2, {cOpAnt, nSC2Ini, nTotReq, nTotProd, nSC2Fin, aSd3Req, aSd3Prod})
+	AADD(aArrSc2, {cOpAnt, nSC2Ini, nTotReq, nTotProd, nQuantApont, nSC2Fin, nSc2Quant})
+	nTotReq  := 0
+	nTotProd := 0
+
+	(cAlias)->(DbSkip())
+ENDDO
+
+//Cálculo do custo das OPs com o método de apropriação mensal
+FOR nCont := 1 TO LEN(aArrSc2)
+
+	FOR nContProd := 1 TO LEN(aSd3Prod)
+		IF  aSd3Prod[nContProd][5] == "T" .OR. aSd3Prod[nContProd][1] <> aArrSc2[nContProd][1]
+			//Calcula o custo para para o apontamento total da OP
+			AADD(aCusOp, {aArrSc2[nContProd][1],  aArrSc2[nCont][2], aArrSc2[nCont][6], aArrSc2[nCont][3]})
 
 
-Return (QrySC2MOV)
+
+		ELSE
+		//Calcula o custo de apontamentos parciais
+			DO Case
+				CASE nMetAprop == 1 //Método de apropriação sequencial
+					IF nProdProp == 1
+
+					ELSEIF nProdProp == 3
+
+					END
+				CASE nMetAprop == 2 //Método de apropriação mensal
+					IF nProdProp == 1
+						//mexer aqui
+
+						aCusOp := aArrSc2[nCont][3] / (aArrSc2[nCont][3] / nQuantApont)
+
+						AADD(aCusOp, {aArrSc2[nContProd][1],  aArrSc2[nCont][2],aArrSc2[nCont][6], aCusOp})
+
+
+					ELSEIF nProdProp == 3
+
+					END
+				CASE nMetAprop == 3 //Método de apropriação diário
+					IF nProdProp == 1
+
+					ELSEIF nProdProp == 3
+
+					END
+			ENDCASE
+		END
+	NEXT nContProd
+NEXT nCont
+
+Return (aCusOp) //Retorna a tabela temporária
