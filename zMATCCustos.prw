@@ -2868,9 +2868,11 @@ Static Function GetDatas(nOpc)
 	cQuery := "SELECT MAX(B9_DATA) AS B9_DATA FROM "+RETSQLNAME('SB9')+" WHERE B9_FILIAL='"+xFilial("SB9")+"' AND D_E_L_E_T_ <> '*'
 	If nOpc == 1
 		IF substr(cLocal,1,2) <> "**"
-			cQuery += " AND B9_LOCAL='"+cLocal+"' "
+			cQuery += " AND B9_LOCAL BETWEEN '"+cLocAnDe+"' AND '"+cLocAnAte+"' "
+
 		ENDIF
-		cQuery += " AND B9_COD = '"+cProduto+"' AND B9_DATA < '"+DTOS(dDtProces)+"'"
+		cQuery += " AND B9_COD BETWEEN '"+cProdAnDe+"' AND '"+cProdAnAte+"' AND B9_DATA < '"+DTOS(dDtProces)+"'"
+
 	EndIf
 	cQuery := ChangeQuery(cQuery)
 	DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QrySB9",.F.,.T.)
@@ -3405,29 +3407,32 @@ Static Function MATCPCalc()
 
 		// Zero array de produtos divergentes para não ficar duplicado em um novo processo.
 		aProdAn    := {{'','','',''}}
+		GetDatas() //Grava a última data de fechamento na variável dUltFech
 
 		// Saldo Inicial
 		IncProc("Processando Saldo Inicial")
 		cQuery := " SELECT B9_FILIAL, B9_COD, B9_LOCAL, B9_VINI1, B9_QINI FROM "+RETSQLNAME("SB9")
 		cQuery += " WHERE B9_COD BETWEEN '"+cProdAnDe+"' AND '"+cProdAnAte+"'"
 		If lCusfilA // Custo por Armazem
-			cQuery += "  AND B9_LOCAL BETWEEN '"+cLocAnDe+"' AND '"+cLocAnAte+"' AND B9_DATA = '"+DTOS(dFechAn)+"' AND B9_FILIAL = '"+xFILIAL("SB9")+"' "
+			cQuery += "  AND B9_LOCAL BETWEEN '"+cLocAnDe+"' AND '"+cLocAnAte+"' AND B9_DATA = '"+DTOS(dUltFech)+"' AND B9_FILIAL = '"+xFILIAL("SB9")+"' "
 		ElseIf lCusfilF // Custo por Filial
-			cQuery += " AND B9_DATA <= '"+DTOS(dFechAn)+"' AND B9_FILIAL = '"+xFILIAL("SB9")+"' "
+			cQuery += " AND B9_DATA = '"+DTOS(dUltFech)+"' AND B9_FILIAL = '"+xFILIAL("SB9")+"' "
 		ElseIf lCusfilE // Custo por Empresa
-			cQuery += " AND B9_DATA <= '"+DTOS(dFechAn)+"'"
+			cQuery += " AND B9_DATA = '"+DTOS(dUltFech)+"'"
 		EndIf
 		cQuery += " AND "+RETSQLNAME("SB9")+".D_E_L_E_T_ = ' '"
 		cQuery := ChangeQuery(cQuery)
 		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QrySB9An",.F.,.T.)
 		While QrySB9An->(!Eof())
-			RecLock( "MATCTmpAn", .T. )
-			Replace MATCTmpAn->FILIAL	With	QrySB9An->B9_FILIAL
-			Replace MATCTmpAn->COD    	With	QrySB9An->B9_COD
-			Replace MATCTmpAn->ARMAZEM  With	QrySB9An->B9_LOCAL
-			Replace MATCTmpAn->CUSTO	With	QrySB9An->B9_VINI1
-			Replace MATCTmpAn->QUANT	With	QrySB9An->B9_QINI
-			msUnlock()
+			IF !IsProdMOD(QrySB9An->B9_COD) // Não processar produtos MOD / GGF
+				RecLock( "MATCTmpAn", .T. )
+				Replace MATCTmpAn->FILIAL	With	QrySB9An->B9_FILIAL
+				Replace MATCTmpAn->COD    	With	QrySB9An->B9_COD
+				Replace MATCTmpAn->ARMAZEM  With	QrySB9An->B9_LOCAL
+				Replace MATCTmpAn->CUSTO	With	QrySB9An->B9_VINI1
+				Replace MATCTmpAn->QUANT	With	QrySB9An->B9_QINI
+				msUnlock()
+			END
 			QrySB9An->(DBSkip())
 		Enddo
 		QrySB9An->(DBCloseArea())
@@ -3437,6 +3442,7 @@ Static Function MATCPCalc()
 		cQuery := " SELECT D1_FILIAL, D1_COD, D1_LOCAL, SUM(D1_CUSTO) AS SD1_CUSTO, SUM(D1_QUANT) AS SD1_QUANT FROM "+RETSQLNAME("SD1")+", "+RETSQLNAME("SF4")
 		cQuery += " WHERE D1_COD BETWEEN '"+cProdAnDe+"' AND '"+cProdAnAte+"' "
 		cQuery += " AND D1_ORIGLAN <> 'LF' AND D1_DTDIGIT >= '"+DTOS(dIniAn)+"' AND D1_DTDIGIT <= '"+DTOS(dFIMAn)+"'"
+		cQuery += " AND D1_FILIAL = F4_FILIAL "
 		cQuery += " AND D1_TES=F4_CODIGO AND F4_ESTOQUE = 'S' "
 		//Complemento do Where da tabela SD1 (Tratamento Filial)
 		If lCusfilE
@@ -3483,13 +3489,15 @@ Static Function MATCPCalc()
 		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QryTSD3AnP",.F.,.T.)
 
 		While QryTSD3AnP->(!Eof())
-			RecLock( "MATCTmpAn", .T. )
-			Replace MATCTmpAn->FILIAL	With	QryTSD3AnP->D3_FILIAL
-			Replace MATCTmpAn->COD    	With	QryTSD3AnP->D3_COD
-			Replace MATCTmpAn->ARMAZEM  With	QryTSD3AnP->D3_LOCAL
-			Replace MATCTmpAn->CUSTO	With	-(QryTSD3AnP->SD3_CUSTO_R)
-			Replace MATCTmpAn->QUANT	With	-(QryTSD3AnP->SD3_QUANT_R)
-			msUnlock()
+			IF !IsProdMOD(QryTSD3AnP->D3_COD) // Não processar produtos MOD / GGF
+				RecLock( "MATCTmpAn", .T. )
+				Replace MATCTmpAn->FILIAL	With	QryTSD3AnP->D3_FILIAL
+				Replace MATCTmpAn->COD    	With	QryTSD3AnP->D3_COD
+				Replace MATCTmpAn->ARMAZEM  With	QryTSD3AnP->D3_LOCAL
+				Replace MATCTmpAn->CUSTO	With	-(QryTSD3AnP->SD3_CUSTO_R)
+				Replace MATCTmpAn->QUANT	With	-(QryTSD3AnP->SD3_QUANT_R)
+				msUnlock()
+			END
 			QryTSD3AnP->(DBSkip())
 		Enddo
 		QryTSD3AnP->(DBCloseArea())
@@ -3512,13 +3520,15 @@ Static Function MATCPCalc()
 		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QryTSD3An",.F.,.T.)
 
 		While QryTSD3An->(!Eof())
-			RecLock( "MATCTmpAn", .T. )
-			Replace MATCTmpAn->FILIAL	With	QryTSD3An->D3_FILIAL
-			Replace MATCTmpAn->COD    	With	QryTSD3An->D3_COD
-			Replace MATCTmpAn->ARMAZEM  With	QryTSD3An->D3_LOCAL
-			Replace MATCTmpAn->CUSTO	With	QryTSD3An->SD3_CUSTO
-			Replace MATCTmpAn->QUANT	With	QryTSD3An->SD3_QUANT
-			msUnlock()
+			IF !IsProdMOD(QryTSD3An->D3_COD) // Não processar produtos MOD / GGF
+				RecLock( "MATCTmpAn", .T. )
+				Replace MATCTmpAn->FILIAL	With	QryTSD3An->D3_FILIAL
+				Replace MATCTmpAn->COD    	With	QryTSD3An->D3_COD
+				Replace MATCTmpAn->ARMAZEM  With	QryTSD3An->D3_LOCAL
+				Replace MATCTmpAn->CUSTO	With	QryTSD3An->SD3_CUSTO
+				Replace MATCTmpAn->QUANT	With	QryTSD3An->SD3_QUANT
+				msUnlock()
+			END
 			QryTSD3An->(DBSkip())
 		Enddo
 		QryTSD3An->(DBCloseArea())
@@ -3545,6 +3555,7 @@ Static Function MATCPCalc()
 		cQuery := ChangeQuery(cQuery)
 		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QryTSD2An",.F.,.T.)
 		While QryTSD2An->(!Eof())
+
 			RecLock( "MATCTmpAn", .T. )
 			Replace MATCTmpAn->FILIAL	With	QryTSD2An->D2_FILIAL
 			Replace MATCTmpAn->COD    	With	QryTSD2An->D2_COD
@@ -3552,6 +3563,7 @@ Static Function MATCPCalc()
 			Replace MATCTmpAn->CUSTO	With	-(QryTSD2An->SD2_CUSTO)
 			Replace MATCTmpAn->QUANT	With	-(QryTSD2An->SD2_QUANT)
 			msUnlock()
+
 			QryTSD2An->(DBSkip())
 		Enddo
 		QryTSD2An->(DBCloseArea())
@@ -3784,7 +3796,7 @@ Return
 //------------------------------------------------------------------------------------------
 Static Function CalcCusOP(cProdini,cProdFim,cLocal, cDataIni,cDataFim)
 Local nProdProp  	:= SuperGetMV("MV_PRODPR0",.F.,1)
-LOCAL lseq300    	:= SuperGetMv('MV_SEQ300',.F.,.F.)
+//LOCAL lseq300    	:= SuperGetMv('MV_SEQ300',.F.,.F.)
 Local cQuery     	:= ""
 Local cAlias     	:= ""
 Local cOpAnt     	:= ""
@@ -3857,20 +3869,19 @@ SQLToTrb(cQuery, aStrut, cAlias)
 (cAlias)->(DbGotop())
 
 //oTable:GetRealName() RETONA A TABELA TEMPORÁRIA EM USO
-While ((cAlias)->(EOF()) == .F.) //.AND. (cAlias)->C2_OP == cOpAnt
+While ((cAlias)->(EOF()) == .F.)
 
 	cOpAnt    := (cAlias)->C2_OP
 	nSC2Ini   := (cAlias)->C2_VINI
 	nSC2Fin   := (cAlias)->C2_VFIM
 	nSc2Quant := (cAlias)->C2_QUANT
-		//WHILE cOpAnt == (cAlias)->C2_OP
 
-		IF SUBSTR((cAlias)->D3_CF,1,2) $ "RE"
+		IF SUBSTR((cAlias)->D3_CF,1,2) $ "RE" // Gera o array com as requisições da OP
 
 			AADD(aSd3Req, {(cAlias)->D3_CUSTO, (cAlias)->D3_EMISSAO, (cAlias)->D3_NUMSEQ})
 			nTotReq  +=  (cAlias)->D3_CUSTO
 
-		ELSEIF SUBSTR((cAlias)->D3_CF,1,2) $ "PR" // Gera o aarray com os paontamentos de produção (PR0)
+		ELSEIF SUBSTR((cAlias)->D3_CF,1,2) $ "PR" // Gera o aarray com os apontamentos de produção (PR0)
 
 			AADD(aSd3Prod, {(cAlias)->C2_OP,(cAlias)->D3_CUSTO, (cAlias)->D3_QUANT, (cAlias)->D3_NUMSEQ, (cAlias)->D3_PARCTOT})
 			nTotProd    +=  (cAlias)->D3_CUSTO
@@ -3912,15 +3923,12 @@ FOR nCont := 1 TO LEN(aArrSc2)
 
 			WHILE nPos < LEN(aSd3Prod) .AND. aArrSc2[nCont][1] == aSd3Prod[nContProd][1]
 
-				IF  aArrSc2[nCont][8] == "T"
-					//Calcula o custo para para o apontamento total da OP
+				IF  aArrSc2[nCont][8] == "T" //Calcula o custo para para o apontamento total da OP
 					cOp     := aArrSc2[nCont][1]
 					nSC2Ini := aArrSc2[nCont][2]
 					nSC2Fin := aArrSc2[nCont][6]
 					nCusOP  := aArrSc2[nCont][3] - aArrSc2[nCont][4]
-
-				ELSE
-				//Calcula o custo de apontamentos parciais
+				ELSE //Calcula o custo de apontamentos parciais
 					DO Case
 						CASE nMetAprop == 1 //Método de apropriação sequencial
 							IF nProdProp == 1
@@ -3966,3 +3974,14 @@ FOR nCont := 1 TO LEN(aArrSc2)
 NEXT nCont
 
 Return (aCusOp)
+
+/* Função para gerar a tabela temporária com as movimentações da OP */
+/* ----------------------Wagner Lima 23/08/2019-------------------- */
+
+STATIC FUNCTION GERATTP()
+
+
+
+
+
+RETURN
