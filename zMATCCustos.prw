@@ -2588,7 +2588,18 @@ Static Function MATCProces(oFolder2)
 
 		ProcRegua(15)
 
+		IF substr(cLocal,1,2) == "**"
+			cLocAnDe  := " "
+			cLocAnAte := "ZZZZZZZZZZ"
+		ELSE
+			cLocAnDe  := cLocal
+			cLocAnAte := cLocal
+		ENDIF
+		cProdAnDe  := cProduto
+		cProdAnAte := cProduto
+
 		// Saldo Inicial
+		GetDatas() // Carrega a data do último fechamento
 		IncProc("Processando Saldo Inicial")
 		IF substr(cLocal,1,2) <> "**"
 			cQuery := " SELECT B9_QINI, B9_VINI1 FROM "+RETSQLNAME("SB9")
@@ -2597,12 +2608,12 @@ Static Function MATCProces(oFolder2)
 			//cQuery := " SELECT B9_QINI, B9_VINI1 FROM "+RETSQLNAME("SB9")
 		ENDIF
 		cQuery += " WHERE B9_COD = '"+cProduto+"' "
+		IF substr(cLocal,1,2) <> "**"
+			cQuery += " AND B9_LOCAL = '"+cLocal+"' "
+		ENDIF
 		If lCusfilA // Custo por Armazem
-			cQuery += " AND B9_LOCAL = '"+cLocal+"' AND B9_DATA = '"+DTOS(dUltFech)+"' AND B9_FILIAL='"+xFilial("SB9")+"' "
+			cQuery += " AND B9_DATA = '"+DTOS(dUltFech)+"' AND B9_FILIAL='"+xFilial("SB9")+"' "
 		ElseIf lCusfilF // Custo por Filial
-			IF substr(cLocal,1,2) <> "**"
-				cQuery += " AND B9_LOCAL = '"+cLocal+"' "
-			ENDIF
 			cQuery += " AND B9_DATA = '"+DTOS(dUltFech)+"' AND B9_FILIAL = '"+xFilial("SB9")+"'"
 		ElseIf lCusfilE // Custo por Empresa
 			cQuery += " AND B9_DATA = '"+DTOS(dUltFech)+"'"
@@ -2646,7 +2657,10 @@ Static Function MATCProces(oFolder2)
 				cQuery += " AND D1_FILIAL = '"+xFilial("SD1")+"' "
 
 		ElseIf lCusfilA
-			cQuery += " AND D1_LOCAL = '"+cLocal+"' "
+			IF SUBSTR(cLocal,1,2) <> "**"
+				cQuery += " AND D1_LOCAL = '"+cLocal+"' "
+			ENDIF
+			cQuery += " AND D1_FILIAL = '"+xFilial("SD1")+"' "
 		EndIf
 		cQuery += " AND SD1.D_E_L_E_T_ = ' '"
 		cQuery += " AND SF4.D_E_L_E_T_ = ' '"
@@ -2671,12 +2685,15 @@ Static Function MATCProces(oFolder2)
 				cQuery += " AND D2_FILIAL = F4_FILIAL"
 			EndIf
 		ElseIf lCusfilF
-		IF SUBSTR(cLocal,1,2) <> "**"
+			IF SUBSTR(cLocal,1,2) <> "**"
 				cQuery += " AND D2_LOCAL = '"+cLocal+"' "
 			ENDIF
 			cQuery += " AND D2_FILIAL = '"+xFilial("SD2")+"' "
 		ElseIf lCusfilA
-			cQuery += " AND D2_LOCAL = '"+cLocal+"' "
+			IF SUBSTR(cLocal,1,2) <> "**"
+				cQuery += " AND D2_LOCAL = '"+cLocal+"' "
+			ENDIF
+			cQuery += " AND D2_FILIAL = '"+xFilial("SD2")+"' "
 		EndIf
 		cQuery += " AND SD2.D_E_L_E_T_ = ' '"
 		cQuery += " AND SF4.D_E_L_E_T_ = ' '"
@@ -2701,7 +2718,10 @@ Static Function MATCProces(oFolder2)
 			ENDIF
 			cQuery += " AND D3_FILIAL = '"+xFilial("SD3")+"' "
 		ElseIf lCusfilA
-			cQuery += " AND D3_LOCAL = '"+cLocal+"' "
+			IF SUBSTR(cLocal,1,2) <> "**"
+				cQuery += " AND D3_LOCAL = '"+cLocal+"' "
+			ENDIF
+			cQuery += " AND D3_FILIAL = '"+xFilial("SD3")+"' "
 		EndIf
 		cQuery += " AND SD3.D_E_L_E_T_ = ' '"
 
@@ -2757,28 +2777,16 @@ Static Function MATCProces(oFolder2)
 
 		// Chama a função CalcCusOP para buscar o saldo das OPs
 
-		aCusOp := CalcCusOP(cProduto,cProduto,cLocal, dDataI,dDataF)
+		aCusOp := CalcCusOP(cProduto,cProduto,cLocal, cLocal, dDataI,dDataF)
 
-		//(QrySC2MOV)->(DbGotop())
-    // LAÇO DE REPETIÇÃO PARA MONTAR O ARRAY DO CABEÇALHO (SZO)
-	FOR nCont := 1 TO LEN(aCusOp)
-		nVlOpSB9    += aCusOp[nCont][2]
-		nFecVlOpSB2 += aCusOp[nCont][3]
-		nFecMovOp   += aCusOp[nCont][4]
 
-	NEXT nCont
-	/*
-        While ((QrySC2MOV)->(EOF()) == .F.)
-			nVlOpSB9    += (QrySC2MOV)->C2_VINI
-			nFecVlOpSB2 += (QrySC2MOV)->C2_VFIM // Valor final SB2
-			nFecMovOp	+= (QrySC2MOV)->TotalMov
-			(QrySC2MOV)->(DbSkip())
-		ENDDO// Valor inicial SB9
-		//nFecVlOpSB2 := QrySC2MOV->C2_VFIM1 // Valor final SB2
-		//nFecMovOp	:= QrySC2MOV->TotalMov //Total das requisições menos produções
+    	// LAÇO DE REPETIÇÃO PARA MONTAR O ARRAY DO CABEÇALHO (SZO)
+		FOR nCont := 1 TO LEN(aCusOp)
+			nVlOpSB9    += aCusOp[nCont][2]  //
+			nFecVlOpSB2 += aCusOp[nCont][3]
+			nFecMovOp   += aCusOp[nCont][4]
 
-		*/
-		//(QrySC2MOV)->(DBCloseArea())
+		NEXT nCont
 
 		// Saldo Fechamento x Movimento
 		IncProc("Processando Saldo Fechamento x Movimento")
@@ -2805,7 +2813,7 @@ Static Function MATCProces(oFolder2)
 		MATCValFec()
 
 		// Apresenta mensagem com resultado do fechamento
-		If (nFecMovQt <> nFecQtSB2) .Or. (nFecMovVl <> nFecVlSB2)
+		If (ROUND(nFecMovQt,2) <> ROUND(nFecQtSB2,2)) .Or. (ROUND(nFecMovVl,2) <> ROUND(nFecVlSB2,2)) .or. (ROUND(nFecVlOpSB2,2) <> ROUND(nFecMovOp,2))
 			@ 115,201 SAY oSay VAR "DIVERGÊNCIA" SIZE 200,50 PIXEL OF oFolder2:aDialogs[1] FONT oBold2 COLOR CLR_HRED
 		Else
 			@ 115,201 SAY oSay VAR "OK" SIZE 200,50 PIXEL OF oFolder2:aDialogs[1] FONT oBold2 COLOR CLR_GREEN
@@ -3376,9 +3384,15 @@ Return
 Static Function MATCPCalc()
 
 	Local cQuery      := ""
+	Local cData       := "s"
 	Local QryTSD1An, QryTSD2An, QryTSD3An, QryTSD3AnP, QrySB9An, QrySB2An, QryTempDB := ""
 	Local aFields     := {}
+	Local aSaldIni    := {}
 	Local lRet		  := .T.
+	Local nFecVlOpSB2 := 0
+	LOcal nFecMovOp   := 0
+	//Local oSaldIni    As object
+	//Local oData       As object
 
 	// Array com os campos utilizados na view da consulta de divergência de produtos
 	Aadd(aFields, {"FILIAL","C",TamSX3("B9_FILIAL")[1],0})
@@ -3411,26 +3425,31 @@ Static Function MATCPCalc()
 
 		// Saldo Inicial
 		IncProc("Processando Saldo Inicial")
-		cQuery := " SELECT B9_FILIAL, B9_COD, B9_LOCAL, B9_VINI1, B9_QINI FROM "+RETSQLNAME("SB9")
+
+		cQuery := " SELECT B9_FILIAL, B9_COD, B9_LOCAL FROM "+RETSQLNAME("SB9")
 		cQuery += " WHERE B9_COD BETWEEN '"+cProdAnDe+"' AND '"+cProdAnAte+"'"
 		If lCusfilA // Custo por Armazem
-			cQuery += "  AND B9_LOCAL BETWEEN '"+cLocAnDe+"' AND '"+cLocAnAte+"' AND B9_DATA = '"+DTOS(dUltFech)+"' AND B9_FILIAL = '"+xFILIAL("SB9")+"' "
+			cQuery += "  AND B9_LOCAL BETWEEN '"+cLocAnDe+"' AND '"+cLocAnAte+"' AND B9_FILIAL = '"+xFILIAL("SB9")+"' "
 		ElseIf lCusfilF // Custo por Filial
-			cQuery += " AND B9_DATA = '"+DTOS(dUltFech)+"' AND B9_FILIAL = '"+xFILIAL("SB9")+"' "
+			cQuery += " AND B9_FILIAL = '"+xFILIAL("SB9")+"' "
 		ElseIf lCusfilE // Custo por Empresa
 			cQuery += " AND B9_DATA = '"+DTOS(dUltFech)+"'"
 		EndIf
-		cQuery += " AND "+RETSQLNAME("SB9")+".D_E_L_E_T_ = ' '"
+		cQuery += " AND "+RETSQLNAME("SB9")+".D_E_L_E_T_ = ' ' GROUP BY B9_FILIAL, B9_COD, B9_LOCAL"
 		cQuery := ChangeQuery(cQuery)
 		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QrySB9An",.F.,.T.)
+
 		While QrySB9An->(!Eof())
+
 			IF !IsProdMOD(QrySB9An->B9_COD) // Não processar produtos MOD / GGF
+				aSaldIni := CalcEst(QrySB9An->B9_COD,QrySB9An->B9_LOCAL,dUltFech,xFILIAL("SB9"),.F.,.F.)
 				RecLock( "MATCTmpAn", .T. )
 				Replace MATCTmpAn->FILIAL	With	QrySB9An->B9_FILIAL
 				Replace MATCTmpAn->COD    	With	QrySB9An->B9_COD
 				Replace MATCTmpAn->ARMAZEM  With	QrySB9An->B9_LOCAL
-				Replace MATCTmpAn->CUSTO	With	QrySB9An->B9_VINI1
-				Replace MATCTmpAn->QUANT	With	QrySB9An->B9_QINI
+				Replace MATCTmpAn->CUSTO	With	aSaldIni[2]
+				Replace MATCTmpAn->QUANT	With	aSaldIni[1]
+				//Replace MATCTmpAn->QUANT	With	QrySB9An->B9_DATA
 				msUnlock()
 			END
 			QrySB9An->(DBSkip())
@@ -3580,9 +3599,9 @@ Static Function MATCPCalc()
 		cQuery += " AND "+RETSQLNAME("SB2")+".D_E_L_E_T_ = ' '"
 		cQuery := ChangeQuery(cQuery)
 		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QrySB2An",.F.,.T.)
+		IncProc("Processando Saldo Fechamento x Movimento")
 		While QrySB2An->(!Eof())
 
-			IncProc("Processando Saldo Fechamento x Movimento")
 			// Faz um select na tabela temporaria para comparar os valores das movimentações com o valor do fechamento (SB2)
 			cQuery := " SELECT TMP.FILIAL, TMP.COD, TMP.ARMAZEM, SUM(TMP.CUSTO) AS CUSTO, SUM(TMP.QUANT) AS QUANT FROM "+oTempTable:GetRealName()+" TMP"
 			cQuery += " WHERE TMP.FILIAL = '"+QrySB2An->B2_FILIAL+"' AND TMP.COD = '"+QrySB2An->B2_COD+"' AND TMP.ARMAZEM = '"+QrySB2An->B2_LOCAL+"'
@@ -3591,8 +3610,18 @@ Static Function MATCPCalc()
 			cQuery := ChangeQuery(cQuery)
 			DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QryTempDB",.F.,.T.)
 			While QryTempDB->(!Eof())
+
+				//Calcula o custo das OPs
+				aCusOp := CalcCusOP(QryTempDB->COD, QryTempDB->COD, QryTempDB->ARMAZEM, QryTempDB->ARMAZEM, dDataI, dFIMAn)
+
+    			//For para montar o custo das OPs do produto
+				FOR nCont := 1 TO LEN(aCusOp)
+					nFecVlOpSB2 += aCusOp[nCont][3]
+					nFecMovOp   += aCusOp[nCont][4]
+				NEXT nCont
+
 				// Verifica se a diferença no valor do movimento x fechamento
-				If (QryTempDB->CUSTO <> QrySB2An->B2_VFIM1) .Or. (QryTempDB->QUANT <> QrySB2An->B2_QFIM)
+				If (Round(QryTempDB->CUSTO,2) <> Round(QrySB2An->B2_VFIM1,2)) .Or. (QryTempDB->QUANT <> QrySB2An->B2_QFIM) .or. (Round(nFecVlOpSB2,2) <> Round(nFecMovOp,2))
 					AAdd(aProdAn,{QrySB2An->B2_FILIAL,QrySB2An->B2_COD,QrySB2An->B2_LOCAL,"DIVERGENTE"})
 				EndIf
 				QryTempDB->(DBSkip())
@@ -3794,7 +3823,7 @@ Return
 @Return (Retona array com OP divergente)
 */
 //------------------------------------------------------------------------------------------
-Static Function CalcCusOP(cProdini,cProdFim,cLocal, cDataIni,cDataFim)
+Static Function CalcCusOP(cProdini, cProdFim, cLocAnDe, cLocAnAte, cDataIni, cDataFim)
 Local nProdProp  	:= SuperGetMV("MV_PRODPR0",.F.,1)
 //LOCAL lseq300    	:= SuperGetMv('MV_SEQ300',.F.,.F.)
 Local cQuery     	:= ""
@@ -3824,54 +3853,18 @@ Local aCusOp		:= {}
 Local oTable     	As Object
 Local oSd3Prod      As Object
 Local oRet			As Object
-DEFAULT cLocal   	:= "**"
+DEFAULT cLocAnDe   	:= "**"
 
-cQuery := "SELECT SC2.C2_FILIAL As C2_FILIAL, SC2.C2_NUM + SC2.C2_ITEM + SC2.C2_SEQUEN AS C2_OP, SC2.C2_VINI1 AS C2_VINI, SC2.C2_VFIM1 AS C2_VFIM, "
+//Verifica o método de aprorpiação utilizado no recálculo do custo médio
+Pergunte("MTA330",.F.)
+nMetAprop := mv_par14
 
-cQuery += "SC2.C2_PRODUTO As C2_PROD, SC2.C2_QUANT AS C2_QUANT, SD3.D3_CF AS D3_CF, SD3.D3_CUSTO1 As D3_CUSTO, SD3.D3_EMISSAO As D3_EMISSAO, SD3.D3_NUMSEQ As D3_NUMSEQ, SD3.D3_QUANT As D3_QUANT, SD3.D3_PARCTOT AS D3_PARCTOT "
+//Função para geração da tabela temporária
+cAlias := GeraTTP(cProdini, cProdFim, cDataFim, cDataIni,cLocAnDe,cLocAnAte)
 
-cQuery += "FROM "+RetSqlName("SC2")+" AS SC2 JOIN "+RetSqlName("SD3")+" AS SD3 ON SC2.C2_NUM + SC2.C2_ITEM + SC2.C2_SEQUEN  = SD3.D3_OP "
-
-cQuery += "AND SC2.C2_FILIAL = '"+xFilial("SC2")+"' AND SC2.D_E_L_E_T_ <> '*' AND SD3.D3_FILIAL = '"+xFilial("SC2")+"' AND SD3.D_E_L_E_T_ <> '*' AND SD3.D3_ESTORNO = ' ' "
-
-cQuery += "AND SC2.C2_PRODUTO BETWEEN '"+cProdini+"' AND '"+cProdFim+"' AND SC2.C2_EMISSAO <= '"+DTOS(cDataFim)+"' AND (SC2.C2_DATRF = ' ' OR SC2.C2_DATRF >= '"+DTOS(cDataIni)+"') "
-
-IF cLocal != "**"
-	cQuery += "AND SC2.C2_LOCAL = '"+cLocal+"'"
-END
-
-cQuery := ChangeQuery(cQuery)
-
-//Pega o próximo alias temporário disponível
-cAlias := GetNextAlias()
-oTable := FwTemporaryTable():New(cAlias)
-
-//Cria a estrutura dos campos da tabela temporária
-Aadd(aStrut, {"C2_FILIAL","C",TamSX3("C2_FILIAL")[1],0})
-Aadd(aStrut, {"C2_VINI","N",TamSX3("B2_CM1")[1],8})
-Aadd(aStrut, {"C2_VFIM","N",TamSX3("B2_CM1")[1],8})
-Aadd(aStrut, {"C2_PROD","C",TamSX3("B1_COD")[1],0})
-Aadd(aStrut, {"C2_OP","C",TamSX3("D3_OP")[1],0})
-Aadd(aStrut, {"C2_QUANT","N",TamSX3("C2_QUANT")[1],2})
-Aadd(aStrut, {"D3_CF","C",TamSX3("D3_CF")[1],0})
-Aadd(aStrut, {"D3_CUSTO","N",TamSX3("B2_CM1")[1],8})
-Aadd(aStrut, {"D3_EMISSAO","C",TamSX3("D3_EMISSAO")[1],0})
-Aadd(aStrut, {"D3_NUMSEQ","C",TamSX3("D3_NUMSEQ")[1],0})
-Aadd(aStrut, {"D3_QUANT","N",TamSX3("D3_QUANT")[1],2})
-Aadd(aStrut, {"D3_PARCTOT","C",TamSX3("D3_PARCTOT")[1],0})
-
-oTable:SetFields(aStrut)
-//Cria  o índice temporário
-oTable:AddIndex("1", {"C2_FILIAL","C2_PROD","C2_OP"} )
-oTable:Create()
-
-SQLToTrb(cQuery, aStrut, cAlias)
-(cAlias)->(DbGotop())
-
-//oTable:GetRealName() RETONA A TABELA TEMPORÁRIA EM USO
 While ((cAlias)->(EOF()) == .F.)
 
-	cOpAnt    := (cAlias)->C2_OP
+	//cOpAnt    := (cAlias)->C2_OP
 	nSC2Ini   := (cAlias)->C2_VINI
 	nSC2Fin   := (cAlias)->C2_VFIM
 	nSc2Quant := (cAlias)->C2_QUANT
@@ -3888,28 +3881,38 @@ While ((cAlias)->(EOF()) == .F.)
 			nQuantApont += (cAlias)->D3_QUANT
 			cParcTot    := (cAlias)->D3_PARCTOT
 
-		ELSEIF SUBSTR((cAlias)->D3_CF,1,3) == "DE0" // Calcula as devoluções de produto requisitado contra a OP
-			nDevolucao  +=  (cAlias)->D3_CUSTO
-			(cAlias)->(DbSkip())
-			LOOP
-		END
+		ELSEIF SUBSTR((cAlias)->D3_CF,1,3) $ "DE0-DE1" // Calcula as devoluções de produto requisitado contra a OP
 
+			nDevolucao  +=  (cAlias)->D3_CUSTO
+			//(cAlias)->(DbSkip())
+
+			//LOOP
+		END
+	cOpAnt    := (cAlias)->C2_OP
 	(cAlias)->(DbSkip())
+	//Quando for o último registro zera a varável cOpAnt Op para que o registros passe na validação ( cOpAnt <> (cAlias)->C2_OP )
+	//IF ((cAlias)->(EOF()) == .T.)
+	//	cOpAnt := ""
+	//END
+
 	IF cOpAnt <> (cAlias)->C2_OP
 
-		AADD(aArrSc2, {cOpAnt, nSC2Ini, nTotReq - nDevolucao , nTotProd, nQuantApont, nSC2Fin, nSc2Quant, cParcTot, nDevolucao})
+		AADD(aArrSc2, {cOpAnt, nSC2Ini, nTotReq + nSC2Ini - nDevolucao , nTotProd, nQuantApont, nSC2Fin, nSc2Quant, cParcTot, nDevolucao})
 		nTotReq     := 0
 		nTotProd    := 0
 		nQuantApont := 0
 		nDevolucao  := 0
+
 	END
+	//(cAlias)->(DbSkip())
+	//cOpAnt    := (cAlias)->C2_OP
+	//(cAlias)->(DbSkip())
 ENDDO
 
 //Cálculo do custo das OPs com o método de apropriação mensal
 FOR nCont := 1 TO LEN(aArrSc2)
 	IF LEN(aSd3Prod) > 0
 
-		//FOR nContProd := 1 TO LEN(aSd3Prod)
 		nContProd := nCont
 		nPos := 1
 		oSd3Prod := aToHM(aSd3Prod)
@@ -3918,54 +3921,58 @@ FOR nCont := 1 TO LEN(aArrSc2)
 			cOp     := aArrSc2[nCont][1]
 			nSC2Ini := aArrSc2[nCont][2]
 			nSC2Fin := aArrSc2[nCont][6]
-			nCusOP  := aArrSc2[nCont][3]
+			nCusOP  := aArrSc2[nCont][3] - aArrSc2[nCont][4]
 		ELSE
 
-			WHILE nPos < LEN(aSd3Prod) .AND. aArrSc2[nCont][1] == aSd3Prod[nContProd][1]
+			WHILE nPos < LEN(aSd3Prod)
+				IF aArrSc2[nCont][1] == aSd3Prod[nContProd][1]
+					IF  aArrSc2[nCont][8] == "T" //Calcula o custo para para o apontamento total da OP
+						cOp     := aArrSc2[nCont][1]
+						nSC2Ini := aArrSc2[nCont][2]
+						nSC2Fin := aArrSc2[nCont][6]
+						nCusOP  := aArrSc2[nCont][3] - aArrSc2[nCont][4]
+					ELSE //Calcula o custo de apontamentos parciais
+						DO Case
+							CASE nMetAprop == 1 //Método de apropriação sequencial
+								IF nProdProp == 1
 
-				IF  aArrSc2[nCont][8] == "T" //Calcula o custo para para o apontamento total da OP
-					cOp     := aArrSc2[nCont][1]
-					nSC2Ini := aArrSc2[nCont][2]
-					nSC2Fin := aArrSc2[nCont][6]
-					nCusOP  := aArrSc2[nCont][3] - aArrSc2[nCont][4]
-				ELSE //Calcula o custo de apontamentos parciais
-					DO Case
-						CASE nMetAprop == 1 //Método de apropriação sequencial
-							IF nProdProp == 1
+								ELSEIF nProdProp == 3
 
-							ELSEIF nProdProp == 3
-
-							END
-						CASE nMetAprop == 2 //Método de apropriação mensal
-							IF nProdProp == 1
+								END
+							CASE nMetAprop == 2 //Método de apropriação mensal
 
 								cOp     := aArrSc2[nCont][1]
 								nSC2Ini := aArrSc2[nCont][2]
 								nSC2Fin := aArrSc2[nCont][6]
-								nCusOP  += aArrSc2[nCont][3]  / (aArrSc2[nCont][5] / aSd3Prod[nContProd][3])
+								IF nProdProp == 1 // MV_PRODPR0 com o conteúdo 1
+									nCusOP  += aArrSc2[nCont][3]  / (aArrSc2[nCont][5] / aSd3Prod[nContProd][3])
+								ELSEIF nProdProp == 3 // MV_PRODPR0 com o conteúdo 3
+									nCusOP  += (aSd3Prod[nContProd][3]  / aArrSc2[nCont][7]) * aArrSc2[nCont][3]
+								END
 								nContProd ++
+							CASE nMetAprop == 3 //Método de apropriação diário
+								IF nProdProp == 1
 
-							ELSEIF nProdProp == 3
+								ELSEIF nProdProp == 3
 
-							END
+								END
+						ENDCASE
+					END
 
-						CASE nMetAprop == 3 //Método de apropriação diário
-							IF nProdProp == 1
-
-							ELSEIF nProdProp == 3
-
-							END
-					ENDCASE
+					nPos++
+					//LOOP
+				ELSE
+					nContProd ++
+					nPos++
+					//LOOP
 				END
-
-				nPos++
 				LOOP
 			ENDDO
-
 			IF nCusOP > 0
 				nCusOP := aArrSc2[nCont][3] - nCusOP
 			END
 		END
+
 		AADD(aCusOp, {cOp,  nSC2Ini, nSC2Fin, nCusOP})
 		nCusOP := 0
 
@@ -3975,13 +3982,61 @@ NEXT nCont
 
 Return (aCusOp)
 
-/* Função para gerar a tabela temporária com as movimentações da OP */
-/* ----------------------Wagner Lima 23/08/2019-------------------- */
+/*------ Função para gerar a tabela temporária com as movimentações da OP -----*/
+/* ---------------------------Wagner Lima 16/09/2019-------------------------- */
+/*Criei esta função para facilitar em futras modificações na estrutura da query*/
 
-STATIC FUNCTION GERATTP()
+STATIC FUNCTION GeraTTP(cProdini, cProdFim, cDataFim, cDataIni,cLocAnDe,cLocAnAte)
+Local cQuery     	:= ""
+Local cAlias     	:= ""
+Local aStrut        := {}
+Local oTable     	As Object
+Local oSd3Prod      As Object
+DEFAULT cLocAnDe   	:= "**"
+
+//Query para busca de requisições, devoluções e apontamentos de produção
+cQuery := "SELECT SC2.C2_FILIAL As C2_FILIAL, SC2.C2_NUM + SC2.C2_ITEM + SC2.C2_SEQUEN AS C2_OP, SC2.C2_VINI1 AS C2_VINI, SC2.C2_VFIM1 AS C2_VFIM, "
+
+cQuery += "SC2.C2_PRODUTO As C2_PROD, SC2.C2_QUANT AS C2_QUANT, SD3.D3_CF AS D3_CF, SD3.D3_CUSTO1 As D3_CUSTO, SD3.D3_EMISSAO As D3_EMISSAO, SD3.D3_NUMSEQ As D3_NUMSEQ, SD3.D3_QUANT As D3_QUANT, SD3.D3_PARCTOT AS D3_PARCTOT "
+
+cQuery += "FROM "+RetSqlName("SC2")+" AS SC2 JOIN "+RetSqlName("SD3")+" AS SD3 ON SC2.C2_NUM + SC2.C2_ITEM + SC2.C2_SEQUEN  = SD3.D3_OP "
+
+cQuery += "AND SC2.C2_FILIAL = '"+xFilial("SC2")+"' AND SC2.D_E_L_E_T_ <> '*' AND SD3.D3_FILIAL = '"+xFilial("SC2")+"' AND SD3.D_E_L_E_T_ <> '*' AND SD3.D3_ESTORNO = ' ' AND SD3.D3_EMISSAO BETWEEN '"+DTOS(cDataIni)+"' AND '"+DTOS(cDataFim)+"' "
+
+cQuery += "AND SC2.C2_PRODUTO BETWEEN '"+cProdini+"' AND '"+cProdFim+"' AND SC2.C2_EMISSAO <= '"+DTOS(cDataFim)+"' AND (SC2.C2_DATRF = ' ' OR SC2.C2_DATRF >= '"+DTOS(cDataIni)+"') "
+
+IF cLocAnDe != "**"
+	cQuery += "AND SC2.C2_LOCAL BETWEEN  '"+cLocAnDe+"' AND '"+cLocAnAte+"' "
+END
+
+cQuery := ChangeQuery(cQuery)
+
+//Pega o próximo alias temporário disponível
+cAlias := GetNextAlias()
+//oTable:GetRealName() RETONA A TABELA TEMPORÁRIA EM USO
+oTable := FwTemporaryTable():New(cAlias)
 
 
+//Cria a estrutura dos campos da tabela temporária
+Aadd(aStrut, {"C2_FILIAL","C",TamSX3("C2_FILIAL")[1],0})
+Aadd(aStrut, {"C2_VINI","N",TamSX3("B2_CM1")[1],8})
+Aadd(aStrut, {"C2_VFIM","N",TamSX3("B2_CM1")[1],8})
+Aadd(aStrut, {"C2_PROD","C",TamSX3("B1_COD")[1],0})
+Aadd(aStrut, {"C2_OP","C",TamSX3("D3_OP")[1],0})
+Aadd(aStrut, {"C2_QUANT","N",TamSX3("C2_QUANT")[1],2})
+Aadd(aStrut, {"D3_CF","C",TamSX3("D3_CF")[1],0})
+Aadd(aStrut, {"D3_CUSTO","N",TamSX3("B2_CM1")[1],8})
+Aadd(aStrut, {"D3_EMISSAO","C",TamSX3("D3_EMISSAO")[1],0})
+Aadd(aStrut, {"D3_NUMSEQ","C",TamSX3("D3_NUMSEQ")[1],0})
+Aadd(aStrut, {"D3_QUANT","N",TamSX3("D3_QUANT")[1],2})
+Aadd(aStrut, {"D3_PARCTOT","C",TamSX3("D3_PARCTOT")[1],0})
+oTable:SetFields(aStrut)
 
+//Cria  o índice temporário
+oTable:AddIndex("1", {"C2_FILIAL","C2_PROD","C2_OP"} )
+oTable:Create()
 
+SQLToTrb(cQuery, aStrut, cAlias)
+(cAlias)->(DbGotop())
 
-RETURN
+RETURN (cAlias)
