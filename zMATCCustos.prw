@@ -2478,6 +2478,7 @@ oFolder2 - objeto tFolder da página
 Static Function MATCProces(oFolder2)
 
 	Local cQuery   := ""
+	Local cQtdMov  := ""
 	Local aArea    := GetArea()
 	Local Qrykdex, QrySC2, QrySB9 := ""
 	Local aTamSD3  := TamSx3('D3_QUANT')
@@ -2509,6 +2510,7 @@ Static Function MATCProces(oFolder2)
 	nFecMovQt	:= 0
 	nFecMovVl	:= 0
 	nFecMovOp	:= 0
+	nQuantArm   := 0
 
 	//Contabilização
 	nVlContab   := 0
@@ -2602,27 +2604,35 @@ Static Function MATCProces(oFolder2)
 		GetDatas() // Carrega a data do último fechamento
 		IncProc("Processando Saldo Inicial")
 		IF substr(cLocal,1,2) <> "**"
-			cQuery := " SELECT B9_QINI, B9_VINI1 FROM "+RETSQLNAME("SB9")
+			//cQuery := " SELECT B9_QINI, B9_VINI1 FROM "+RETSQLNAME("SB9")
+			cQuery := " SELECT SUM(B9_QINI) B9_QINI, SUM(B9_VINI1) B9_VINI1, B9_LOCAL AS ARMAZEM FROM "+RETSQLNAME("SB9")
 		Else
 			cQuery := " SELECT SUM(B9_QINI) B9_QINI, SUM(B9_VINI1) B9_VINI1 FROM "+RETSQLNAME("SB9")
 			//cQuery := " SELECT B9_QINI, B9_VINI1 FROM "+RETSQLNAME("SB9")
 		ENDIF
 		cQuery += " WHERE B9_COD = '"+cProduto+"' "
-		IF substr(cLocal,1,2) <> "**"
-			cQuery += " AND B9_LOCAL = '"+cLocal+"' "
-		ENDIF
+		//IF substr(cLocal,1,2) <> "**"
+			//cQuery += " AND B9_LOCAL = '"+cLocal+"' "
+		//ENDIF
 		If lCusfilA // Custo por Armazem
 			cQuery += " AND B9_DATA = '"+DTOS(dUltFech)+"' AND B9_FILIAL='"+xFilial("SB9")+"' "
+			cQuery += " AND B9_LOCAL = '"+cLocal+"' "
 		ElseIf lCusfilF // Custo por Filial
 			cQuery += " AND B9_DATA = '"+DTOS(dUltFech)+"' AND B9_FILIAL = '"+xFilial("SB9")+"'"
 		ElseIf lCusfilE // Custo por Empresa
 			cQuery += " AND B9_DATA = '"+DTOS(dUltFech)+"'"
 		EndIf
-		cQuery += " AND "+RETSQLNAME("SB9")+".D_E_L_E_T_ = ' '"
+		cQuery += " AND "+RETSQLNAME("SB9")+".D_E_L_E_T_ = ' ' GROUP BY B9_LOCAL"
 		cQuery := ChangeQuery(cQuery)
 		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QrySB9",.F.,.T.)
-		nQtSB9 := QrySB9->B9_QINI
-		nVLSB9 := QrySB9->B9_VINI1
+		WHILE QrySB9->(!Eof())
+			nQtSB9 += QrySB9->B9_QINI
+			nVLSB9 += QrySB9->B9_VINI1
+			IF substr(cLocal,1,2) <> "**" .AND. QrySB9->ARMAZEM == cLocal
+				nQuantArm := QrySB9->B9_QINI
+			ENDIF
+			DBSKIP()
+		ENDDO
 		QrySB9->(DBCloseArea())
 
 		/*--------------------------------------------------------------*/
@@ -2651,9 +2661,9 @@ Static Function MATCProces(oFolder2)
 				cQuery += " AND D1_FILIAL = F4_FILIAL"
 			EndIf
 		ElseIf lCusfilF
-			IF SUBSTR(cLocal,1,2) <> "**"
-				cQuery += " AND D1_LOCAL = '"+cLocal+"' "
-			ENDIF
+			//IF SUBSTR(cLocal,1,2) <> "**"
+				//cQuery += " AND D1_LOCAL = '"+cLocal+"' "
+			//ENDIF
 				cQuery += " AND D1_FILIAL = '"+xFilial("SD1")+"' "
 
 		ElseIf lCusfilA
@@ -2685,9 +2695,9 @@ Static Function MATCProces(oFolder2)
 				cQuery += " AND D2_FILIAL = F4_FILIAL"
 			EndIf
 		ElseIf lCusfilF
-			IF SUBSTR(cLocal,1,2) <> "**"
-				cQuery += " AND D2_LOCAL = '"+cLocal+"' "
-			ENDIF
+			//IF SUBSTR(cLocal,1,2) <> "**"
+				//cQuery += " AND D2_LOCAL = '"+cLocal+"' "
+			//ENDIF
 			cQuery += " AND D2_FILIAL = '"+xFilial("SD2")+"' "
 		ElseIf lCusfilA
 			IF SUBSTR(cLocal,1,2) <> "**"
@@ -2713,9 +2723,9 @@ Static Function MATCProces(oFolder2)
 		cQuery += " AND D3_ESTORNO = ' ' AND D3_EMISSAO >= '"+DTOS(dDataI)+"' AND D3_EMISSAO <= '"+DTOS(dDataF)+"'"
 		//Complemento do Where da tabela SD3 (Tratamento Filial)
 		If lCusfilF
-			IF SUBSTR(cLocal,1,2) <> "**"
-				cQuery += " AND D3_LOCAL = '"+cLocal+"' "
-			ENDIF
+			//IF SUBSTR(cLocal,1,2) <> "**"
+				//cQuery += " AND D3_LOCAL = '"+cLocal+"' "
+			//ENDIF
 			cQuery += " AND D3_FILIAL = '"+xFilial("SD3")+"' "
 		ElseIf lCusfilA
 			IF SUBSTR(cLocal,1,2) <> "**"
@@ -2737,7 +2747,7 @@ Static Function MATCProces(oFolder2)
 		While Qrykdex->(!Eof())
 			// Verifico qual CFOP para incluir no array aKarLocal que será carregado no browser
 			If SUBSTRING(Qrykdex->CF,1,2) = 'PR' .Or. SUBSTRING(Qrykdex->CF,1,2) = 'DE' .Or. SUBSTRING(Qrykdex->CF,1,1) < '5'
-				// Somatório das valores finais
+
 				nFecMovQt += Qrykdex->QUANT // Quantidade Fechamento x Movimento
 				nFecMovVl += Round(Qrykdex->CUSTO,TAMSX3("B2_CM1")[2]) // Valor Fechamento x Movimento
 				AAdd(aKarLocal,{STOD(Qrykdex->Emissao), Qrykdex->CF,Qrykdex->Armazem, Qrykdex->NUMSEQ, Qrykdex->SEQCALC, Qrykdex->QUANT, Round(Qrykdex->CUSTO,aTamSD3[2]),Round((Qrykdex->CUSTO/Qrykdex->QUANT),aTamSD3[2]),SPACE(10),SPACE(10),SPACE(10),nFecMovQt,nFecMovVl})
@@ -2753,11 +2763,16 @@ Static Function MATCProces(oFolder2)
 					nQtSD1  := nQtSD1 + Qrykdex->QUANT
 					nVlSD1  := nVlSD1 + Round(Qrykdex->CUSTO,aTamSD3[2])
 				EndIf
+				// Pega a quanitdade do aramzém para prossessar o custo do  armazém mesmo que o custo seja por filial
+				IF SUBSTR(cLocal,1,2) <> "**" .AND. lCusfilF .AND. Qrykdex->ARMAZEM == cLocal
+					nQuantArm += Qrykdex->QUANT
+				ENDIF
 
 			ElseIf SUBSTRING(Qrykdex->CF,1,2) = 'RE' .Or. SUBSTRING(Qrykdex->CF,1,1) >= '5'
-				// Somatório das valores finais
-				nFecMovQt -= Qrykdex->QUANT // Quantidade Fechamento x Movimento
-				nFecMovVl -= Round(Qrykdex->CUSTO,TAMSX3("B2_CM1")[2]) // Valor Fechamento x Movimento
+
+					nFecMovQt -= Qrykdex->QUANT // Quantidade Fechamento x Movimento
+					nFecMovVl -= Round(Qrykdex->CUSTO,TAMSX3("B2_VFIM1")[2]) // Valor Fechamento x Movimento
+				//ENDIF
 				AAdd(aKarLocal,{STOD(Qrykdex->Emissao), Qrykdex->CF,Qrykdex->Armazem, Qrykdex->NUMSEQ, Qrykdex->SEQCALC,SPACE(10),SPACE(10),SPACE(10),Qrykdex->QUANT,Round(Qrykdex->CUSTO,aTamSD3[2]),Round((Qrykdex->CUSTO/Qrykdex->QUANT),aTamSD3[2]),nFecMovQt,nFecMovVl})
 
 				//Grava variáveis para apresentar os valores em tela
@@ -2768,12 +2783,27 @@ Static Function MATCProces(oFolder2)
 					nQtSD2  := nQtSD2 + Qrykdex->QUANT
 					nVlSD2  := nVlSD2 + Round(Qrykdex->CUSTO,aTamSD3[2])
 				EndIf
+				// Pega a quanitdade do aramzém para prossessar o custo do  armazém mesmo que o custo seja por filial
+				IF SUBSTR(cLocal,1,2) <> "**" .AND. lCusfilF .AND. Qrykdex->ARMAZEM == cLocal
+					nQuantArm -= Qrykdex->QUANT
+				ENDIF
 
 			EndIf
+
 			DBSkip()
 
-		Enddo
+		ENDDO
+		//IF SUBSTR(cLocal,1,2) <> "**" .AND. lCusfilF .AND. Qrykdex->ARMAZEM == cLocal
+		//	nFecMovVl := (nFecMovVl / nFecMovQt) * Qrykdex->QUANT
+		//	nFecMovQt := Qrykdex->QUANT
+		//ENDIF
+
 		Qrykdex->(DBCloseArea())
+
+		IF SUBSTR(cLocal,1,2) <> "**" .AND. lCusfilF //.AND. Qrykdex->ARMAZEM == cLocal
+			nFecMovVl := (nFecMovVl / nFecMovQt) * nQuantArm
+			nFecMovQt := nQuantArm//cQtdMov
+		ENDIF
 
 		// Chama a função CalcCusOP para buscar o saldo das OPs
 
@@ -2813,7 +2843,7 @@ Static Function MATCProces(oFolder2)
 		MATCValFec()
 
 		// Apresenta mensagem com resultado do fechamento
-		If (ROUND(nFecMovQt,2) <> ROUND(nFecQtSB2,2)) .Or. (ROUND(nFecMovVl,2) <> ROUND(nFecVlSB2,2)) .or. (ROUND(nFecVlOpSB2,2) <> ROUND(nFecMovOp,2))
+		If (ROUND(nFecMovQt,TAMSX3("B2_QATU")[2]) <> ROUND(nFecQtSB2,TAMSX3("B2_QATU")[2])) .Or. (ROUND(nFecMovVl,TAMSX3("B2_VATU1")[2]) <> ROUND(nFecVlSB2,TAMSX3("B2_VATU1")[2])) .or. (ROUND(nFecVlOpSB2,TAMSX3("B2_VATU1")[2]) <> ROUND(nFecMovOp,TAMSX3("B2_VATU1")[2]))
 			@ 115,201 SAY oSay VAR "DIVERGÊNCIA" SIZE 200,50 PIXEL OF oFolder2:aDialogs[1] FONT oBold2 COLOR CLR_HRED
 		Else
 			@ 115,201 SAY oSay VAR "OK" SIZE 200,50 PIXEL OF oFolder2:aDialogs[1] FONT oBold2 COLOR CLR_GREEN
@@ -2846,7 +2876,7 @@ Static Function MATCProces(oFolder2)
 		//oVlContab:Refresh()
 		//oVlCT2:Refresh()
 
-	EndIf
+	ENDIF
 
 Return
 
@@ -3385,12 +3415,13 @@ Static Function MATCPCalc()
 
 	Local cQuery      := ""
 	Local cData       := "s"
-	Local QryTSD1An, QryTSD2An, QryTSD3An, QryTSD3AnP, QrySB9An, QrySB2An, QryTempDB := ""
+	Local QryTSD1An, QryTSD2An, QryTSD3An, QryTSD3AnP, QrySB9An, QrySB2An, QryTempDB, QrySB2FIL := ""
 	Local aFields     := {}
 	Local aSaldIni    := {}
 	Local lRet		  := .T.
 	Local nFecVlOpSB2 := 0
 	LOcal nFecMovOp   := 0
+	Local nValFin     := 0
 	//Local oSaldIni    As object
 	//Local oData       As object
 
@@ -3442,7 +3473,7 @@ Static Function MATCPCalc()
 		While QrySB9An->(!Eof())
 
 			IF !IsProdMOD(QrySB9An->B9_COD) // Não processar produtos MOD / GGF
-				aSaldIni := CalcEst(QrySB9An->B9_COD,QrySB9An->B9_LOCAL,dUltFech,xFILIAL("SB9"),.F.,.F.)
+				aSaldIni := CalcEst(QrySB9An->B9_COD,QrySB9An->B9_LOCAL,dIniAn,xFILIAL("SB9"),.F.,.F.)
 				RecLock( "MATCTmpAn", .T. )
 				Replace MATCTmpAn->FILIAL	With	QrySB9An->B9_FILIAL
 				Replace MATCTmpAn->COD    	With	QrySB9An->B9_COD
@@ -3592,7 +3623,7 @@ Static Function MATCPCalc()
 		cQuery := " SELECT B2_FILIAL, B2_COD, B2_LOCAL, B2_VFIM1, B2_QFIM FROM "+RETSQLNAME("SB2")
 		cQuery += " WHERE B2_COD BETWEEN '"+cProdAnDe+"' AND '"+cProdAnAte+"' "
 		If lCusfilA // Custo por Armazem
-			cQuery += "  AND B2_LOCAL BETWEEN '"+cLocAnDe+"' AND '"+cLocAnAte+"'"
+			cQuery += "  AND B2_LOCAL BETWEEN '"+cLocAnDe+"' AND '"+cLocAnAte+"' AND B2_FILIAL = '"+xFilial("SB2")+"' "
 		ElseIf lCusfilF  // Custo por Filial
 			cQuery += " AND B2_FILIAL='"+xFilial("SB2")+"' "
 		EndIf
@@ -3604,7 +3635,7 @@ Static Function MATCPCalc()
 
 			// Faz um select na tabela temporaria para comparar os valores das movimentações com o valor do fechamento (SB2)
 			cQuery := " SELECT TMP.FILIAL, TMP.COD, TMP.ARMAZEM, SUM(TMP.CUSTO) AS CUSTO, SUM(TMP.QUANT) AS QUANT FROM "+oTempTable:GetRealName()+" TMP"
-			cQuery += " WHERE TMP.FILIAL = '"+QrySB2An->B2_FILIAL+"' AND TMP.COD = '"+QrySB2An->B2_COD+"' AND TMP.ARMAZEM = '"+QrySB2An->B2_LOCAL+"'
+			cQuery += " WHERE TMP.FILIAL = '"+QrySB2An->B2_FILIAL+"' AND TMP.COD = '"+QrySB2An->B2_COD+"' AND TMP.ARMAZEM = '"+QrySB2An->B2_LOCAL+"' "
 			cQuery += " AND TMP.D_E_L_E_T_ = ' '"
 			cQuery += " GROUP BY TMP.FILIAL, TMP.COD, TMP.ARMAZEM"
 			cQuery := ChangeQuery(cQuery)
@@ -3613,15 +3644,31 @@ Static Function MATCPCalc()
 
 				//Calcula o custo das OPs
 				aCusOp := CalcCusOP(QryTempDB->COD, QryTempDB->COD, QryTempDB->ARMAZEM, QryTempDB->ARMAZEM, dDataI, dFIMAn)
-
+				nFecVlOpSB2 := 0
+				nFecMovOp   := 0
+				aCusOp := {}
     			//For para montar o custo das OPs do produto
 				FOR nCont := 1 TO LEN(aCusOp)
 					nFecVlOpSB2 += aCusOp[nCont][3]
 					nFecMovOp   += aCusOp[nCont][4]
 				NEXT nCont
 
-				// Verifica se a diferença no valor do movimento x fechamento
-				If (Round(QryTempDB->CUSTO,2) <> Round(QrySB2An->B2_VFIM1,2)) .Or. (QryTempDB->QUANT <> QrySB2An->B2_QFIM) .or. (Round(nFecVlOpSB2,2) <> Round(nFecMovOp,2))
+				//Mesmo o custo sendo por filial faz o cálculo do custo de apenas 1 armazém
+				IF SuperGetMv("MV_CUSFIL",.F.,"A") == "F"
+					cQuery := " SELECT TMP.FILIAL, TMP.COD, SUM(TMP.CUSTO) AS CUSTO, SUM(TMP.QUANT) AS QUANT FROM "+oTempTable:GetRealName()+" TMP"
+					cQuery += " WHERE TMP.FILIAL = '"+QrySB2An->B2_FILIAL+"' AND TMP.COD = '"+QrySB2An->B2_COD+"'"
+					cQuery += " AND TMP.D_E_L_E_T_ = ' '"
+					cQuery += " GROUP BY TMP.FILIAL, TMP.COD"
+					cQuery := ChangeQuery(cQuery)
+					DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QrySB2FIL",.F.,.T.)
+					//cQuery += "AND TMP.ARMAZEM = '"+QrySB2FIL->B2_LOCAL+"'
+					nValFin := ROUND((QrySB2FIL->CUSTO / QrySB2FIL->QUANT) * QryTempDB->QUANT, TAMSX3("B2_VATU1")[2])
+					QrySB2FIL->(DBCloseArea())
+				ELSE
+					nValFin := Round(QryTempDB->CUSTO,TAMSX3("B2_VATU1")[2])
+				END
+
+				If (nValFin <> Round(QrySB2An->B2_VFIM1,TAMSX3("B2_VATU1")[2])) .Or. (QryTempDB->QUANT <> QrySB2An->B2_QFIM) .or. (Round(nFecVlOpSB2,TAMSX3("B2_QATU")[2]) <> Round(nFecMovOp,TAMSX3("B2_QATU")[2]))
 					AAdd(aProdAn,{QrySB2An->B2_FILIAL,QrySB2An->B2_COD,QrySB2An->B2_LOCAL,"DIVERGENTE"})
 				EndIf
 				QryTempDB->(DBSkip())
@@ -3820,7 +3867,7 @@ Return
 @since     29/07/2019
 @protected
 
-@Return (Retona array com OP divergente)
+@Return (Retorna array com OP divergente)
 */
 //------------------------------------------------------------------------------------------
 Static Function CalcCusOP(cProdini, cProdFim, cLocAnDe, cLocAnAte, cDataIni, cDataFim)
@@ -3831,6 +3878,7 @@ Local cAlias     	:= ""
 Local cOpAnt     	:= ""
 Local cOp           := ""
 Local cParcTot      := "" //Apontamento parcial ou total
+Local cDataAnt      := ""
 Local nTotReq    	:= 0  //Total de requisições
 Local nDevolucao    := 0  //Devoluções do produto requisistado contra a OP
 Local nTotProd   	:= 0  //Total de produções
@@ -3841,21 +3889,23 @@ Local nSc2Quant  	:= 0
 Local nPos          := 0
 Local nCont      	:= 0
 Local nContProd  	:= 0
-Local FecVlOpSB2 	:= 0
 Local nVlOpSB9   	:= 0
 Local nCusOP	 	:= 0
 Local nQuantApont   := 0
+Local nReqOp        := 0
+Local nDevOp        := 0
 Local aStrut     	:= {}
 Local aSd3Prod   	:= {}
 Local aSd3Req    	:= {}
 Local aArrSc2    	:= {}
 Local aCusOp		:= {}
+LOcal aDevProd      := {}
 Local oTable     	As Object
 Local oSd3Prod      As Object
 Local oRet			As Object
 DEFAULT cLocAnDe   	:= "**"
 
-//Verifica o método de aprorpiação utilizado no recálculo do custo médio
+//Verifica o método de aprorpiação utilizado no recálculo do custo médio buscando da SX1
 Pergunte("MTA330",.F.)
 nMetAprop := mv_par14
 
@@ -3864,19 +3914,18 @@ cAlias := GeraTTP(cProdini, cProdFim, cDataFim, cDataIni,cLocAnDe,cLocAnAte)
 
 While ((cAlias)->(EOF()) == .F.)
 
-	//cOpAnt    := (cAlias)->C2_OP
 	nSC2Ini   := (cAlias)->C2_VINI
 	nSC2Fin   := (cAlias)->C2_VFIM
 	nSc2Quant := (cAlias)->C2_QUANT
 
 		IF SUBSTR((cAlias)->D3_CF,1,2) $ "RE" // Gera o array com as requisições da OP
 
-			AADD(aSd3Req, {(cAlias)->D3_CUSTO, (cAlias)->D3_EMISSAO, (cAlias)->D3_NUMSEQ})
+			AADD(aSd3Req, {(cAlias)->C2_OP,(cAlias)->D3_CUSTO, (cAlias)->D3_EMISSAO, (cAlias)->D3_NUMSEQ})
 			nTotReq  +=  (cAlias)->D3_CUSTO
 
 		ELSEIF SUBSTR((cAlias)->D3_CF,1,2) $ "PR" // Gera o aarray com os apontamentos de produção (PR0)
 
-			AADD(aSd3Prod, {(cAlias)->C2_OP,(cAlias)->D3_CUSTO, (cAlias)->D3_QUANT, (cAlias)->D3_NUMSEQ, (cAlias)->D3_PARCTOT})
+			AADD(aSd3Prod, {(cAlias)->C2_OP,(cAlias)->D3_CUSTO, (cAlias)->D3_QUANT, (cAlias)->D3_NUMSEQ, (cAlias)->D3_PARCTOT,(cAlias)->D3_EMISSAO})
 			nTotProd    +=  (cAlias)->D3_CUSTO
 			nQuantApont += (cAlias)->D3_QUANT
 			cParcTot    := (cAlias)->D3_PARCTOT
@@ -3884,37 +3933,28 @@ While ((cAlias)->(EOF()) == .F.)
 		ELSEIF SUBSTR((cAlias)->D3_CF,1,3) $ "DE0-DE1" // Calcula as devoluções de produto requisitado contra a OP
 
 			nDevolucao  +=  (cAlias)->D3_CUSTO
-			//(cAlias)->(DbSkip())
-
-			//LOOP
+			AADD(aDevProd, {(cAlias)->C2_OP, (cAlias)->D3_CUSTO,(cAlias)->D3_EMISSAO, (cAlias)->D3_NUMSEQ})
 		END
 	cOpAnt    := (cAlias)->C2_OP
+	cDataAnt  := (cAlias)->D3_EMISSAO
 	(cAlias)->(DbSkip())
-	//Quando for o último registro zera a varável cOpAnt Op para que o registros passe na validação ( cOpAnt <> (cAlias)->C2_OP )
-	//IF ((cAlias)->(EOF()) == .T.)
-	//	cOpAnt := ""
-	//END
 
 	IF cOpAnt <> (cAlias)->C2_OP
-
 		AADD(aArrSc2, {cOpAnt, nSC2Ini, nTotReq + nSC2Ini - nDevolucao , nTotProd, nQuantApont, nSC2Fin, nSc2Quant, cParcTot, nDevolucao})
 		nTotReq     := 0
 		nTotProd    := 0
 		nQuantApont := 0
 		nDevolucao  := 0
-
 	END
-	//(cAlias)->(DbSkip())
-	//cOpAnt    := (cAlias)->C2_OP
-	//(cAlias)->(DbSkip())
 ENDDO
 
-//Cálculo do custo das OPs com o método de apropriação mensal
+//Processa todas as OPs do produto Pai do array aArrSc2
 FOR nCont := 1 TO LEN(aArrSc2)
 	IF LEN(aSd3Prod) > 0
 
 		nContProd := nCont
-		nPos := 1
+		nPos := 0
+		nContProd := 1
 		oSd3Prod := aToHM(aSd3Prod)
 
 		IF !HMGet(oSd3Prod, aArrSc2[nCont][1], oRet)
@@ -3932,6 +3972,7 @@ FOR nCont := 1 TO LEN(aArrSc2)
 						nSC2Fin := aArrSc2[nCont][6]
 						nCusOP  := aArrSc2[nCont][3] - aArrSc2[nCont][4]
 					ELSE //Calcula o custo de apontamentos parciais
+
 						DO Case
 							CASE nMetAprop == 1 //Método de apropriação sequencial
 								IF nProdProp == 1
@@ -3950,21 +3991,39 @@ FOR nCont := 1 TO LEN(aArrSc2)
 									nCusOP  += (aSd3Prod[nContProd][3]  / aArrSc2[nCont][7]) * aArrSc2[nCont][3]
 								END
 								nContProd ++
+
 							CASE nMetAprop == 3 //Método de apropriação diário
-								IF nProdProp == 1
-
-								ELSEIF nProdProp == 3
-
+								nReqOp := 1
+								WHILE nReqOp <= LEN(aSd3Req) //Processo todas as requisições com data menos ou igual ao do apontamento da op
+									IF aSd3Req[nReqOp][3] <= aSd3Prod[nContProd][6] .AND. aSd3Req[nReqOp][1] = aSd3Prod[nContProd][1]
+										nTotReq += aSd3Req[nReqOp][2]
+									END
+									nReqOp ++
+									LOOP
 								END
-						ENDCASE
-					END
+								nDEvOp := 1
+								WHILE nDEvOp <= LEN(aDevProd)
+									IF aDevProd[nDEvOp][3] <= aSd3Prod[nContProd][6] .AND. aDevProd[nDEvOp][1] = aSd3Prod[nContProd][1]
+										nTotReq -= 	aDevProd[nDEvOp][2]
+									END
+									nDEvOp ++
+									LOOP
+								END
 
+								IF nProdProp == 1
+									nCusOP  += nTotReq / (aArrSc2[nCont][5] / aSd3Prod[nContProd][3])
+								ELSEIF nProdProp == 3
+									nCusOP  += (aSd3Prod[nContProd][3]  / aArrSc2[nCont][7]) * nTotReq
+								END
+								nContProd ++
+								nTotReq := 0
+						ENDCASE
+
+					END
 					nPos++
-					//LOOP
 				ELSE
-					nContProd ++
+					nContProd++
 					nPos++
-					//LOOP
 				END
 				LOOP
 			ENDDO
