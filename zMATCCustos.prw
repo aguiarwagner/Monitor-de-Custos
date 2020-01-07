@@ -138,8 +138,6 @@ USER Function zMATCCustos()
 	//Outras
 	Private lKardex1  := .T. // Ordena por NUMSEQ
 	Private lKardex2  := .F. // Ordena por SEQCALC
-	Private lTpApurPos   := .T. //Define se utiliza a pós apuração.
-	Private lTpApurPre   := .F. //Define se utiliza a pré-apuração.
 
 	// Monta interface para exibição dos dados
 	MATCDiag(aDadosAmb,aFontes,aVlCampos,aProc,aPE,aParam)
@@ -2301,19 +2299,11 @@ Static Function FPanel04(oPanel)
 	TCheckBox():New( 013,494,"Digitação",bSETGET(lKardex1),oPanel,150,009,,,,,,,,.T.,,,)
 	TCheckBox():New( 025,494,"Sequência" ,bSETGET(lKardex2),oPanel,150,009,,,,,,,,.T.,,,)
 
-	@ 014,544  SAY "Analisar?" SIZE 070,10 PIXEL OF oPanel FONT oBold
-	//TCheckBox():New( 013,584,"Pós fechamento",bSETGET(lTpApurPos),oPanel,150,009,,,, ,,,,.T.,,,{||ValPosPre(.T.)})
-	//TCheckBox():New( 025,584,"Pré fechamento",bSETGET(lTpApurPre),oPanel,150,009,,,, ,,,,.T.,,,{||ValPosPre(.F.)})
-	//TCheckBox():New( 013,584,"Pós fechamento",bSETGET(lTpApurPos),oPanel,150,009,,{||ValPosPre(.T.)},, ,,,,.T.,,,)
-	//TCheckBox():New( 025,584,"Pré fechamento",bSETGET(lTpApurPre),oPanel,150,009,,{||ValPosPre(.F.)},, ,,,,.T.,,,)
-	TCheckBox():New( 013,584,"Pós fechamento",bSETGET(lTpApurPos),oPanel,150,009,,,, ,,,,.T.,,,)
-	TCheckBox():New( 025,584,"Pré fechamento",bSETGET(lTpApurPre),oPanel,150,009,,,, ,,,,.T.,,,)
+	oBtProces := TButton():New( 013, 545, "Processar",oPanel,{||MATCProces(oFolder2)}, 40,12,,,.F.,.T.,.F.,,.F.,,,.F. )
+	oBtSair   := TButton():New( 013, 600, "Sair",oPanel,{||MACTFecha()}, 40,12,,,.F.,.T.,.F.,,.F.,,,.F. )
 
-	oBtProces := TButton():New( 013, 660, "Processar",oPanel,{||MATCProces(oFolder2)}, 40,12,,,.F.,.T.,.F.,,.F.,,,.F. )
-	oBtSair   := TButton():New( 013, 710, "Sair",oPanel,{||MACTFecha()}, 40,12,,,.F.,.T.,.F.,,.F.,,,.F. )
-
-	TSay():New( 037, 664, { || "Consultar Produtos Divergentes" }        , oPanel,,oBold,,,, .T.,CLR_HBLUE,, 100, 010 )
-	oBtPrDiv := TButton():New( 047, 660, "Consultar",oPanel,{||MATCPrDiv()}, 40,12,,,.F.,.T.,.F.,,.F.,,,.F. )
+	TSay():New( 037, 545, { || "Consultar Produtos Divergentes" }        , oPanel,,oBold,,,, .T.,CLR_HBLUE,, 100, 010 )
+	oBtPrDiv := TButton():New( 047, 545, "Consultar",oPanel,{||MATCPrDiv()}, 40,12,,,.F.,.T.,.F.,,.F.,,,.F. )
 
 	/*Saldo Inicial*/
 	@ 007,007 TO 86, 91 PROMPT "Saldo Inicial - SB9" PIXEL OF oFolder2:aDialogs[1]
@@ -2598,6 +2588,11 @@ Static Function MATCProces(oFolder2)
 		ProcRegua(15)
 
 		// Saldo Inicial
+		IF !IsProdMOD(cProduto) // Não processar produtos MOD / GGF
+				aSaldIni := CalcEst(SB1->B1_COD,cLocal,dDataI,xFILIAL("SB9"),.F.,.F.)
+		ENDIF
+
+			/*
 		IncProc("Processando Saldo Inicial")
 		cQuery := " SELECT B9_QINI, B9_VINI1 FROM "+RETSQLNAME("SB9")
 		cQuery += " WHERE B9_COD = '"+cProduto+"' "
@@ -2612,6 +2607,9 @@ Static Function MATCProces(oFolder2)
 		nQtSB9 := QrySB9->B9_QINI
 		nVLSB9 := QrySB9->B9_VINI1
 		QrySB9->(DBCloseArea())
+		*/
+		nQtSB9 := aSaldIni[1]
+		nVLSB9 := aSaldIni[2]
 
 		/*--------------------------------------------------------------*/
 		/*Variáveis para controle do valor de custo após as movimentações*/
@@ -3335,7 +3333,7 @@ Return
 Static Function MATCPCalc()
 
 	Local cQuery      := ""
-	Local QryTSD1An, QryTSD2An, QryTSD3An, QryTSD3AnP, QrySB9An, QrySB2An, QryTempDB := ""
+	Local QryTSD1An, QryTSD2An, QryTSD3An, QryTSD3AnP, QrySB9An, QrySB2An, QryTempDB, QrySB2 := ""
 	Local aFields     := {}
 	Local lRet		  := .T.
 
@@ -3368,7 +3366,12 @@ Static Function MATCPCalc()
 		aProdAn    := {{'','','',''}}
 
 		// Saldo Inicial
+		// Alterado para utilizar a função calcest
+
+
 		IncProc("Processando Saldo Inicial")
+
+		/*
 		cQuery := " SELECT B9_FILIAL, B9_COD, B9_LOCAL, B9_VINI1, B9_QINI FROM "+RETSQLNAME("SB9")
 		cQuery += " WHERE B9_COD BETWEEN '"+cProdAnDe+"' AND '"+cProdAnAte+"' "
 		If lCusfilA // Custo por Armazem
@@ -3379,17 +3382,36 @@ Static Function MATCPCalc()
 		cQuery += " AND "+RETSQLNAME("SB9")+".D_E_L_E_T_ = ' '"
 		cQuery := ChangeQuery(cQuery)
 		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QrySB9An",.F.,.T.)
-		While QrySB9An->(!Eof())
+
+		*/
+		// select na tabela SB2 para pegar os produtos
+		cQuery := " SELECT B2_FILIAL, B2_COD, B2_LOCAL FROM "+RETSQLNAME("SB2")
+		cQuery += " WHERE B2_COD BETWEEN '"+cProdAnDe+"' AND '"+cProdAnAte+"' "
+		If lCusfilA // Custo por Armazem
+			cQuery += "  AND B2_LOCAL BETWEEN '"+cLocAnDe+"' AND '"+cLocAnAte+"' "
+		ENDIF
+
+		cQuery += " AND "+RETSQLNAME("SB2")+".D_E_L_E_T_ = ' '"
+		cQuery := ChangeQuery(cQuery)
+		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QrySB2",.F.,.T.)
+
+
+
+		While QrySB2->(!Eof())
+			IF !IsProdMOD(cProduto) // Não processar produtos MOD / GGF
+				aSaldIni := CalcEst(QrySB2->B2_COD,QrySB2->B2_LOCAL,dDataI,xFILIAL("SB2"),.F.,.F.)
+			ENDIF
 			RecLock( "MATCTmpAn", .T. )
-			Replace MATCTmpAn->FILIAL	With	QrySB9An->B9_FILIAL
-			Replace MATCTmpAn->COD    	With	QrySB9An->B9_COD
-			Replace MATCTmpAn->ARMAZEM  With	QrySB9An->B9_LOCAL
-			Replace MATCTmpAn->CUSTO	With	QrySB9An->B9_VINI1
-			Replace MATCTmpAn->QUANT	With	QrySB9An->B9_QINI
+			Replace MATCTmpAn->FILIAL	With	QrySB2->B2_FILIAL
+			Replace MATCTmpAn->COD    	With	QrySB2->B2_COD
+			Replace MATCTmpAn->ARMAZEM  With	QrySB2->B2_LOCAL
+			Replace MATCTmpAn->CUSTO	With	aSaldIni[2]
+			Replace MATCTmpAn->QUANT	With	aSaldIni[1]
+
 			msUnlock()
-			QrySB9An->(DBSkip())
+			QrySB2->(DBSkip())
 		Enddo
-		QrySB9An->(DBCloseArea())
+		QrySB2->(DBCloseArea())
 
 		// Saldo Entradas
 		IncProc("Processando Saldo Entradas")
@@ -3726,17 +3748,3 @@ Static Function MATCValFoK()
 	oDlgValid:Activate(,,,.T.,,,)
 
 Return
-
-Static Function ValPosPre(lVal)
-Default lVal := .T.
-
-IF !lVal
-	lTpApurPos := .F.
-	lTpApurPre := .T.
-Else
-	lTpApurPre := .F.
-	lTpApurPos := .T.
-EndIf
-//oFolder2:Refresh
-
-Return .T.
