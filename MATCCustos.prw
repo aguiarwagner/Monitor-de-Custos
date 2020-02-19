@@ -71,6 +71,10 @@ USER Function MATCCustos()
 	Private nVlOpSB9
 	Private oQtSD1
 	Private nQtSD1
+	Private nTotEntQt
+	Private nTotEntVal
+	Private nTotSaiQT
+	Private nTotSaiVal
 	Private oVlSD1
 	Private nVlSD1
 	Private oQtSD2
@@ -2229,10 +2233,14 @@ Static Function FPanel04(oPanel)
 	Local oBtProces, oBtProcKa, oBtSair, oBtPrDiv := Nil
 	Local cCusfil	   := cValtoChar(SuperGetMv("MV_CUSFIL",.F.,""))
 	Local aTFolder2    := {}
+	//Private nTotSaiQt
+	//Private nTotSaiVal
+	//Private nTotEntQt
+	//Private nTotEntVal
 
 	Default oPanel     := Nil
 
-	AAdd(aKarLocal ,{CTOD("  /  /  "),Space(06),Space(02),Space(14),Space(06),Space(06),Space(06),Space(06),Space(06),Space(06),Space(06),Space(06),Space(06)})
+	AAdd(aKarLocal ,{/*CTOD("  /  /      ")*/Space(20),Space(06),Space(02),Space(14),Space(06),Space(06),Space(06),Space(06),Space(06),Space(06),Space(06),Space(06),Space(06)})
 
 	DEFINE FONT oBold   NAME "Arial" SIZE 0, -12 BOLD
 	DEFINE FONT oBold1  NAME "Arial" SIZE 0, -12
@@ -2321,16 +2329,16 @@ Static Function FPanel04(oPanel)
 	/*Saldo Entradas*/
 	@ 007,99 TO 86, 183 PROMPT "Entradas - SD1" PIXEL OF oFolder2:aDialogs[1]
 	@ 022,104 SAY "Quant"                        SIZE 025,10 PIXEL OF oFolder2:aDialogs[1] FONT oBold
-	@ 018,124 MSGET oQtSD1  VAR nQtSD1 Picture cPict SIZE 055,10 PIXEL OF oFolder2:aDialogs[1] When .F.
+	@ 018,124 MSGET oQtSD1  VAR nTotEntQt Picture cPict SIZE 055,10 PIXEL OF oFolder2:aDialogs[1] When .F.
 	@ 040,104 SAY "Custo"                        SIZE 025,10 PIXEL OF oFolder2:aDialogs[1] FONT oBold
-	@ 036,124 MSGET oVlSD1  VAR nVlSD1 Picture cPict SIZE 055,10 PIXEL OF oFolder2:aDialogs[1] When .F.
+	@ 036,124 MSGET oVlSD1  VAR nTotEntVal Picture cPict SIZE 055,10 PIXEL OF oFolder2:aDialogs[1] When .F.
 
 	/*Saldo Saídas*/
 	@ 007,191 TO 86, 275 PROMPT "Saídas - SD2"  PIXEL OF oFolder2:aDialogs[1]
 	@ 022,196 SAY "Quant"                        SIZE 025,10 PIXEL OF oFolder2:aDialogs[1] FONT oBold
-	@ 018,216 MSGET oQtSD2  VAR nQtSD2 Picture cPict SIZE 055,10 PIXEL OF oFolder2:aDialogs[1] When .F.
+	@ 018,216 MSGET oQtSD2  VAR nTotSaiQt Picture cPict SIZE 055,10 PIXEL OF oFolder2:aDialogs[1] When .F.
 	@ 040,196 SAY "Custo"                        SIZE 25,10 PIXEL OF oFolder2:aDialogs[1] FONT oBold
-	@ 036,216 MSGET oVlSD2  VAR nVlSD2 Picture cPict SIZE 055,10 PIXEL OF oFolder2:aDialogs[1] When .F.
+	@ 036,216 MSGET oVlSD2  VAR nTotSaiVal Picture cPict SIZE 055,10 PIXEL OF oFolder2:aDialogs[1] When .F.
 
 	/*Saldo Movimentações Internas*/
 	@ 007,283 TO 86, 559 PROMPT "Movimentações Internas - SD3" PIXEL OF oFolder2:aDialogs[1]
@@ -2401,10 +2409,10 @@ Static Function FPanel04(oPanel)
 	@ 003,090 SAY "Custo Inicial : "+Trans(nVLSB9,cPict) SIZE 200,50 PIXEL OF oFolder2:aDialogs[2] FONT oBold
 
 	@ 162,010 SAY "T O T A I S : " SIZE 200,50 PIXEL OF oFolder2:aDialogs[2] FONT oBold
-	@ 162,161 SAY Trans(nQtSD1 + nQtPSD3 + nQtDSD3,cPict) SIZE 200,50 PIXEL OF oFolder2:aDialogs[2] FONT oBold
-	@ 162,233 SAY Trans(nVlSD1 + nVlPSD3 + nVlDSD3,cPict) SIZE 200,50 PIXEL OF oFolder2:aDialogs[2] FONT oBold
-	@ 162,336 SAY Trans(nQtSD2 + nQtRSD3,cPict) SIZE 200,50 PIXEL OF oFolder2:aDialogs[2] FONT oBold
-	@ 162,404 SAY Trans(nVlSD2 + nVlRSD3,cPict) SIZE 200,50 PIXEL OF oFolder2:aDialogs[2] FONT oBold
+	@ 162,161 SAY Trans(nTotEntQt,cPict) SIZE 200,50 PIXEL OF oFolder2:aDialogs[2] FONT oBold
+	@ 162,233 SAY Trans(nTotEntVal,cPict) SIZE 200,50 PIXEL OF oFolder2:aDialogs[2] FONT oBold
+	@ 162,336 SAY Trans(nTotSaiQT,cPict) SIZE 200,50 PIXEL OF oFolder2:aDialogs[2] FONT oBold
+	@ 162,404 SAY Trans(nTotSaiVal,cPict) SIZE 200,50 PIXEL OF oFolder2:aDialogs[2] FONT oBold
 	@ 162,500 SAY Trans(nFecMovQt,cPict) SIZE 200,50 PIXEL OF oFolder2:aDialogs[2] FONT oBold
 	@ 162,563 SAY Trans(nFecMovVl,cPict) SIZE 200,50 PIXEL OF oFolder2:aDialogs[2] FONT oBold
 
@@ -2462,433 +2470,6 @@ Static Function MATCDescPrd()
 
 Return(.T.)
 
-
-//------------------------------------------------------------------------------------------
-/* {Protheus.doc} MATCProces
-Painel04 - Folder4 - MATCProces
-Processa as informações de custo
-
-@Param
-oFolder2 - objeto tFolder da página
-
-@author    Ronaldo Tapia
-@version   12.1.17
-@since     13/09/2018
-
-@Return ( Nil )
-*/
-//------------------------------------------------------------------------------------------
-Static Function MATCProces(oFolder2)
-
-	Local cQuery   := ""
-	Local cQtdMov  := ""
-	Local aArea    := GetArea()
-	Local Qrykdex, QrySC2, QrySB9, QrySB2, QrySB2Ar := ""
-	Local aTamSD3  := TamSx3('D3_QUANT')
-	Local lRet     := .T.
-	Local lFound   := .F.
-	Local nX	   := 0
-	Local nCont    := 0
-	Local aCusOp   := {}
-	Local aAreaSM0  := {}
-	// Zera variáveis da tela
-	nQtSB9      := 0
-	nVLSB9      := 0
-	nVlOpSB9	:= 0
-	nQtSD1		:= 0
-	nVlSD1		:= 0
-	nQtSD2		:= 0
-	nVlSD2		:= 0
-	nQtPSD3		:= 0
-	nVlPSD3		:= 0
-	nVlOpPSD3	:= 0
-	nQtRSD3		:= 0
-	nVlRSD3		:= 0
-	nQtOpRSSD3	:= 0
-	nVlOpRSD3	:= 0
-	nQtDSD3		:= 0
-	nVlDSD3		:= 0
-	nVlOpDSD3	:= 0
-	nFecQtSB2	:= 0
-	nFecVlSB2	:= 0
-	nFecVlOpSB2	:= 0
-	nFecMovQt	:= 0
-	nFecMovVl	:= 0
-	nFecMovOp	:= 0
-	nQuantArm   := 0
-
-	//Contabilização
-	nVlContab   := 0
-	nVlCT2		:= 0
-
-	DEFINE FONT oBold2  NAME "Arial" SIZE 0, -40 BOLD
-
-	// Limpa objeto das mensagens
-	If oSay <> Nil .And. !Empty(oSay:Ctitle)
-		oSay:Ctitle := ""
-		oSay:Refresh()
-	EndIf
-	If oBtErro <> Nil .And. !Empty(oBtErro:Ctitle)
-		oBtErro:Ctitle := ""
-		oBtErro:Refresh()
-	EndIf
-
-	// Zera valores do Kardex
-	aSize(aKarLocal, 0)
-	/*
-	If Empty(dUltFech)
-		MsgAlert("Não foi realizada a virada de saldo para o produto " + Alltrim(cProduto) + ". Verifique!")
-		lRet := .F.
-	EndIf
-	*/
-	// Validações parâmetro MV_CUSFIL
-	If lRet .And. (!lCusfilA .And. !lCusfilF .And. !lCusfilE)
-		MsgStop("Parâmetro MV_CUSFIl não definido nas opções do Monitor. Verifique!")
-		lRet := .F.
-	EndIf
-
-	If lRet .And. ((lCusfilA .And. lCusfilF) .Or. (lCusfilA .And. lCusfilE) .Or. (lCusfilF .And. lCusfilE))
-		MsgStop("Só pode ser definido um tipo de custo na escolha do parâmetro MV_CUSLFIL. Verifique!")
-		lRet := .F.
-	EndIf
-
-	If lRet .And. (!lKardex1 .And. !lKardex2)
-		MsgStop("Defina um tipo de ordenação para o Kardex. Verifique!")
-		lRet := .F.
-	EndIf
-
-	If lRet .And. (lKardex1 .And. lKardex2)
-		MsgStop("Só pode ser definido um tipo de ordenação para o Kardex. Verifique!")
-		lRet := .F.
-	EndIf
-
-	// Validações de Data
-	If lRet .And. (Empty(dDataI) .OR. Empty(dDataF))
-		MsgStop("Datas de Processamento não informadas. Verifique!")
-		lRet := .F.
-	EndIf
-
-	If lRet .And. Empty(cProduto)
-		MsgStop("Produto não informado. Verifique!")
-		lRet := .F.
-	EndIf
-
-	If lRet
-		// Valida o MV_CUSFIL selecionado
-		If lCusfilA
-			If cValtoChar(SuperGetMv("MV_CUSFIL",.F.,"A")) <> "A"
-				MsgAlert("O parâmetro MV_CUSFIL definido na análise é diferente do configurado no dicionário, poderão ocorrer divergências nos valores de fechamento!")
-			EndIf
-		ElseIf lCusfilF
-			If cValtoChar(SuperGetMv("MV_CUSFIL",.F.,"A")) <> "F"
-				MsgAlert("O parâmetro MV_CUSFIL definido na análise é diferente do configurado no dicionário, poderão ocorrer divergências nos valores de fechamento!")
-			EndIf
-		ElseIf lCusfilE
-			If cValtoChar(SuperGetMv("MV_CUSFIL",.F.,"A")) <> "E"
-				MsgAlert("O parâmetro MV_CUSFIL definido na análise é diferente do configurado no dicionário, poderão ocorrer divergências nos valores de fechamento!")
-			EndIf
-		EndIf
-
-		DBSelectArea("SB1")
-		DBSetOrder(1)
-		DBSeek(xFilial("SB1")+cProduto)
-
-		ProcRegua(15)
-
-
-		//IF !IsProdMOD(cProduto) // Não processar produtos MOD / GGF
-		//		aSaldIni := CalcEst(SB1->B1_COD,cLocal,dDataI,xFILIAL("SB9"),.F.,.F.)
-		//ENDIF
-		IF substr(cLocal,1,2) == "**"
-			cLocAnDe  := "  "
-			cLocAnAte := "ZZ"
-		ELSE
-			cLocAnDe  := cLocal
-			cLocAnAte := cLocal
-		ENDIF
-		cProdAnDe  := cProduto
-		cProdAnAte := cProduto
-
-		// Saldo Inicial
-		GetDatas() // Carrega a data do último fechamento
-		IncProc("Processando Saldo Inicial")
-		IF substr(cLocal,1,2) <> "**"
-			cQuery := " SELECT B2_LOCAL AS ARMAZEM FROM"+RETSQLNAME("SB2")
-		Else
-			cQuery := " SELECT B2_LOCAL AS ARMAZEM FROM"+RETSQLNAME("SB2")
-		ENDIF
-		cQuery += " WHERE B2_COD = '"+cProduto+"'"
-		If lCusfilA // Custo por Armazem
-			IF substr(cLocal,1,2) <> "**"
-				cQuery += " AND B2_LOCAL = '"+cLocal+"' AND B2_FILIAL = '"+xFilial("SB2")+"'"
-			ENDIF
-		ElseIf lCusfilF // Custo por Filial
-			cQuery += " AND B2_FILIAL = '"+xFilial("SB2")+"'"
-		EndIf
-		cQuery += " AND "+RETSQLNAME("SB2")+".D_E_L_E_T_ = ' ' GROUP BY B2_LOCAL"
-		cQuery := ChangeQuery(cQuery)
-		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QrySB2Ar",.F.,.T.)
-		WHILE QrySB2Ar->(!Eof())
-			IF !IsProdMOD(cProduto) // Não processar produtos MOD / GGF
-				aSaldIni := CalcEst(cProduto,ARMAZEM,dDataI,xFILIAL("SB2"),.F.,.F.)
-			ENDIF
-			//nQtSB9 += aSaldIni[1]
-			//nVLSB9 += aSaldIni[2]
-			nFecMovQt += aSaldIni[1]
-			nFecMovVl += aSaldIni[2]
-			//Pega o saldo inicial do armazem quando o cliente nã ocontrola o custo por armazém para que possa calcular o custo do armazém
-			IF (substr(cLocal,1,2) <> "**" .OR. substr(cLocal,1,2) <> "##") .AND. QrySB2Ar->ARMAZEM == cLocal
-				nQuantArm := nQtSB9
-				nQtSB9 := aSaldIni[1]
-				nVLSB9 := aSaldIni[2]
-			ELSEIF substr(cLocal,1,2) == "**" .OR. substr(cLocal,1,2) == "##"
-				nQtSB9 += aSaldIni[1]
-				nVLSB9 += aSaldIni[2]
-			ENDIF
-			DBSKIP()
-		ENDDO
-		QrySB2Ar->(DBCloseArea())
-
-		/*--------------------------------------------------------------*/
-		/*Variáveis para controle do valor de custo após as movimentações*/
-		/*--------------------------------------------------------------*/
-		//nFecMovQt:= nQtSB9
-		//nFecMovVl:= nVLSB9
-
-		IncProc("Processando Movimentos")
-		// Entradas
-		cQuery := "SELECT D1_FILIAL as Filial,"
-		cQuery += " D1_EMISSAO as Emissao,"
-		cQuery += " D1_CF as CF,"
-		cQuery += " D1_LOCAL as Armazem,"
-		cQuery += " D1_NUMSEQ as NUMSEQ,"
-		cQuery += " D1_SEQCALC as SEQCALC,"
-		cQuery += " D1_QUANT as QUANT,"
-		cQuery += " D1_CUSTO as CUSTO"
-		cQuery += " FROM "+RetSqlName("SD1")+" SD1,"+RetSqlName("SF4")+" SF4 "
-		cQuery += " WHERE D1_COD = '"+cProduto+"'
-		cQuery += " AND D1_ORIGLAN <> 'LF' AND D1_EMISSAO >= '"+DTOS(dDataI)+"' AND D1_EMISSAO <= '"+DTOS(dDataF)+"'"
-		cQuery += " AND D1_TES=F4_CODIGO AND F4_ESTOQUE = 'S' AND F4_FILIAL = '"+xFilial("SF4")+"'"
-		//Complemento do Where da tabela SD1 (Tratamento Filial)
-		If lCusfilE
-			If FWModeAccess("SD1") == 'E' .AND. FWModeAccess("SF4") == 'E'
-				cQuery += " AND D1_FILIAL = F4_FILIAL"
-			EndIf
-		ElseIf lCusfilF
-			cQuery += " AND D1_FILIAL = '"+xFilial("SD1")+"' "
-		ElseIf lCusfilA
-			IF SUBSTR(cLocal,1,2) <> "**"
-				cQuery += " AND D1_LOCAL = '"+cLocal+"' "
-			ENDIF
-			cQuery += " AND D1_FILIAL = '"+xFilial("SD1")+"' "
-		EndIf
-		cQuery += " AND SD1.D_E_L_E_T_ = ' '"
-		cQuery += " AND SF4.D_E_L_E_T_ = ' '"
-
-		// Saídas
-		cQuery += " UNION ALL"
-		cQuery += " SELECT D2_FILIAL as Filial,"
-		cQuery += " D2_EMISSAO as Emissao,"
-		cQuery += " D2_CF as CF,"
-		cQuery += " D2_LOCAL as Armazem,"
-		cQuery += " D2_NUMSEQ as NUMSEQ,"
-		cQuery += " D2_SEQCALC as SEQCALC,"
-		cQuery += " D2_QUANT as QUANT,"
-		cQuery += " D2_CUSTO1 as CUSTO"
-		cQuery += " FROM "+RetSqlName("SD2")+" SD2,"+RetSqlName("SF4")+" SF4 "
-		cQuery += " WHERE D2_COD = '"+cProduto+"'
-		cQuery += " AND D2_ORIGLAN <> 'LF' AND D2_EMISSAO >= '"+DTOS(dDataI)+"' AND D2_EMISSAO <= '"+DTOS(dDataF)+"'"
-		cQuery += " AND D2_TES = F4_CODIGO AND F4_ESTOQUE = 'S' AND F4_FILIAL = '"+xFilial("SF4")+"'"
-		//Complemento do Where da tabela SD2 (Tratamento Filial)
-		If lCusfilE
-			If FWModeAccess("SD2") == 'E' .AND. FWModeAccess("SF4") == 'E'
-				cQuery += " AND D2_FILIAL = F4_FILIAL"
-			EndIf
-		ElseIf lCusfilF
-			cQuery += " AND D2_FILIAL='"+xFilial("SD2")+"' "
-		ElseIf lCusfilA
-			IF SUBSTR(cLocal,1,2) <> "**"
-				cQuery += " AND D2_LOCAL = '"+cLocal+"' "
-			ENDIF
-			cQuery += " AND D2_FILIAL = '"+xFilial("SD2")+"' "
-		EndIf
-		cQuery += " AND SD2.D_E_L_E_T_ = ' '"
-		cQuery += " AND SF4.D_E_L_E_T_ = ' '"
-
-		// Movimentação Interna
-		cQuery += " UNION ALL"
-		cQuery += " SELECT D3_FILIAL as Filial,"
-		cQuery += " D3_EMISSAO as Emissao,"
-		cQuery += " D3_CF as CF,"
-		cQuery += " D3_LOCAL as Armazem,"
-		cQuery += " D3_NUMSEQ as NUMSEQ,"
-		cQuery += " D3_SEQCALC as SEQCALC,"
-		cQuery += " D3_QUANT as QUANT,"
-		cQuery += " D3_CUSTO1 as CUSTO"
-		cQuery += " FROM "+RetSqlName("SD3")+" SD3 "
-		cQuery += " WHERE D3_COD = '"+cProduto+"'"
-		cQuery += " AND D3_ESTORNO = ' ' AND D3_EMISSAO >= '"+DTOS(dDataI)+"' AND D3_EMISSAO <= '"+DTOS(dDataF)+"'"
-		//Complemento do Where da tabela SD3 (Tratamento Filial)
-		If lCusfilF
-			cQuery += " AND D3_FILIAL = '"+xFilial("SD3")+"' "
-		ElseIf lCusfilA
-			IF SUBSTR(cLocal,1,2) <> "**"
-				cQuery += " AND D3_LOCAL = '"+cLocal+"' "
-			ENDIF
-			cQuery += " AND D3_FILIAL = '"+xFilial("SD3")+"' "
-		EndIf
-		cQuery += " AND SD3.D_E_L_E_T_ = ' '"
-
-		If lKardex1  // Ordena por NUMSEQ
-			cQuery += " ORDER BY NUMSEQ"
-		ElseIf lKardex2  // Ordena por SEQCAL
-			cQuery += " ORDER BY SEQCALC"
-		EndIf
-
-		cQuery := ChangeQuery(cQuery)
-		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"Qrykdex",.F.,.T.)
-
-		While Qrykdex->(!Eof())
-			// Verifico qual CFOP para incluir no array aKarLocal que será carregado no browser
-			If SUBSTRING(Qrykdex->CF,1,2) = 'PR' .Or. SUBSTRING(Qrykdex->CF,1,2) = 'DE' .Or. SUBSTRING(Qrykdex->CF,1,1) < '5'
-				// Somatório das valores finais
-				nFecMovQt += Qrykdex->QUANT // Quantidade Fechamento x Movimento
-				nFecMovVl += Round(Qrykdex->CUSTO,TAMSX3("B2_CM1")[2]) // Valor Fechamento x Movimento
-				AAdd(aKarLocal,{STOD(Qrykdex->Emissao), Qrykdex->CF,Qrykdex->Armazem, Qrykdex->NUMSEQ, Qrykdex->SEQCALC, Qrykdex->QUANT, Round(Qrykdex->CUSTO,aTamSD3[2]),Round((Qrykdex->CUSTO/Qrykdex->QUANT),aTamSD3[2]),SPACE(10),SPACE(10),SPACE(10),nFecMovQt,nFecMovVl})
-
-				//Grava variáveis para apresentar os valores em tela
-				If SUBSTRING(Qrykdex->CF,1,2) = 'PR'
-					nQtPSD3 := nQtPSD3 + Qrykdex->QUANT
-					nVlPSD3 := nVlPSD3 + Round(Qrykdex->CUSTO,aTamSD3[2])
-				ElseIf SUBSTRING(Qrykdex->CF,1,2) = 'DE'
-					nQtDSD3 := nQtDSD3 + Qrykdex->QUANT
-					nVlDSD3 := nVlDSD3 + Round(Qrykdex->CUSTO,aTamSD3[2])
-				ElseIf SUBSTRING(Qrykdex->CF,1,1) <= '5'
-					nQtSD1  := nQtSD1 + Qrykdex->QUANT
-					nVlSD1  := nVlSD1 + Round(Qrykdex->CUSTO,aTamSD3[2])
-				EndIf
-				// Pega a quanitdade do aramzém para prossessar o custo do  armazém mesmo que o custo seja por filial
-				IF SUBSTR(cLocal,1,2) <> "**" .AND. lCusfilF .AND. Qrykdex->ARMAZEM == cLocal
-					nQuantArm += Qrykdex->QUANT
-				ENDIF
-			ElseIf SUBSTRING(Qrykdex->CF,1,2) = 'RE' .Or. SUBSTRING(Qrykdex->CF,1,1) >= '5'
-				// Somatório das valores finais
-				nFecMovQt -= Qrykdex->QUANT // Quantidade Fechamento x Movimento
-				nFecMovVl -= Round(Qrykdex->CUSTO,TAMSX3("B2_VFIM1")[2]) // Valor Fechamento x Movimento
-				AAdd(aKarLocal,{STOD(Qrykdex->Emissao), Qrykdex->CF,Qrykdex->Armazem, Qrykdex->NUMSEQ, Qrykdex->SEQCALC,SPACE(10),SPACE(10),SPACE(10),Qrykdex->QUANT,Round(Qrykdex->CUSTO,aTamSD3[2]),Round((Qrykdex->CUSTO/Qrykdex->QUANT),aTamSD3[2]),nFecMovQt,nFecMovVl})
-
-				//Grava variáveis para apresentar os valores em tela
-				If SUBSTRING(Qrykdex->CF,1,2) = 'RE'
-					nQtRSD3 := nQtRSD3 + Qrykdex->QUANT
-					nVlRSD3 := nVlRSD3 + Round(Qrykdex->CUSTO,aTamSD3[2])
-				ElseIf SUBSTRING(Qrykdex->CF,1,1) >= '5'
-					nQtSD2  := nQtSD2 + Qrykdex->QUANT
-					nVlSD2  := nVlSD2 + Round(Qrykdex->CUSTO,aTamSD3[2])
-				EndIf
-				// Pega a quanitdade do aramzém para prossessar o custo do  armazém mesmo que o custo seja por filial
-				IF SUBSTR(cLocal,1,2) <> "**" .AND. !lCusfilA .AND. Qrykdex->ARMAZEM == cLocal
-					nQuantArm -= Qrykdex->QUANT
-				ENDIF
-			EndIf
-			DBSkip()
-
-		Enddo
-		Qrykdex->(DBCloseArea())
-
-		IF SUBSTR(cLocal,1,2) <> "**" .AND. lCusfilF
-			nFecMovVl := (nFecMovVl / nFecMovQt) * nQuantArm
-			nFecMovQt := nQuantArm//cQtdMov
-		ENDIF
-
-		// Chama a função CalcCusOP para buscar o saldo das OPs
-		aCusOp := CalcCusOP(cProduto,cProduto,cLocal, cLocal, dDataI,dDataF)
-
-    	// LAÇO DE REPETIÇÃO PARA MONTAR O ARRAY DO CABEÇALHO
-		FOR nCont := 1 TO LEN(aCusOp)
-			nVlOpSB9    += aCusOp[nCont][2]
-
-
-
-			nFecVlOpSB2 += aCusOp[nCont][3]
-			nFecMovOp   += aCusOp[nCont][4]
-
-		NEXT nCont
-		// Saldo Fechamento x Movimento
-		IncProc("Processando Saldo Fechamento x Movimento")
-		DBSelectArea("SB2")
-		DBSetOrder(1)
-		cQuery := "SELECT B2_QFIM AS QFIM, B2_VFIM1 AS VFIM FROM "+RetSqlName("SB2")+" "
-
-		cQuery += "WHERE B2_COD = '"+cProduto+"' AND D_E_L_E_T_ = ' ' "
-
-		IF SUBSTR(cLocal,1,2) <> "**"
-			cQuery += "AND B2_LOCAL = '"+cLocal+"' "
-			IF !lCusfilE
-				// custo por armazém ou filial
-				cQuery += "AND B2_FILIAL = '"+xFilial("SB2")+"'"
-
-			ENDIF
-		ELSE
-			IF !lCusfilE
-				// custo por armazém ou filial
-				cQuery += "AND B2_FILIAL = '"+xFilial("SB2")+"'"
-			ENDIF
-		ENDIF
-
-		cQuery := ChangeQuery(cQuery)
-		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QrySB2",.F.,.T.)
-
-		WHILE QrySB2->(!Eof())
-			nFecQtSB2 += QrySB2->QFIM
-			nFecVlSB2 += QrySB2->VFIM
-			lFound := .T.
-			DBSKIP()
-		ENDDO
-		QrySB2->(DBCloseArea())
-		IF !lFound
-			MsgStop("Não foram encontrados registros para os parâmetros informados. Verifique!")
-			Return .F.
-		ENDIF
-		// Processa as validações do fechamento
-		MATCValFec()
-
-		// Apresenta mensagem com resultado do fechamento
-		If (ROUND(nFecMovQt,TAMSX3("B2_QATU")[2]) <> ROUND(nFecQtSB2,TAMSX3("B2_QATU")[2])) .Or. (ROUND(nFecMovVl,TAMSX3("B2_VATU1")[2]) <> ROUND(nFecVlSB2,TAMSX3("B2_VATU1")[2])) .or. (ROUND(nFecVlOpSB2,TAMSX3("B2_VATU1")[2]) <> ROUND(nFecMovOp,TAMSX3("B2_VATU1")[2]))
-			@ 115,201 SAY oSay VAR "DIVERGÊNCIA" SIZE 200,50 PIXEL OF oFolder2:aDialogs[1] FONT oBold2 COLOR CLR_HRED
-		Else
-			@ 115,201 SAY oSay VAR "OK" SIZE 200,50 PIXEL OF oFolder2:aDialogs[1] FONT oBold2 COLOR CLR_GREEN
-		EndIf
-
-		// Atualiza objetos da tela
-		oQtSB9:Refresh()
-		oVlSB9:Refresh()
-		oVlOpSB9:Refresh()
-		oQtSD1:Refresh()
-		oVlSD1:Refresh()
-		oQtSD2:Refresh()
-		oVlSD2:Refresh()
-		oQtPSD3:Refresh()
-		oVlPSD3:Refresh()
-		oVlOpPSD3:Refresh()
-		oQtRSD3:Refresh()
-		oVlRSD3:Refresh()
-		oVlOpRSD3:Refresh()
-		oQtDSD3:Refresh()
-		oVlDSD3:Refresh()
-		oVlOpDSD3:Refresh()
-		oFecQtSB2:Refresh()
-		oFecVlSB2:Refresh()
-		oFecVlOpSB2:Refresh()
-		oFecMovQt:Refresh()
-		oFecMovVl:Refresh()
-		oFecMovOp:Refresh()
-		oListCusto:Refresh()
-		//oVlContab:Refresh()
-		//oVlCT2:Refresh()
-
-	EndIf
-
-Return
 
 
 //------------------------------------------------------------------------------------------
@@ -3448,6 +3029,7 @@ Static Function MATCPCalc(lRot)
 	nVLSB9      := 0
 	nVlOpSB9	:= 0
 	nQtSD1		:= 0
+	nTotEntQt   := 0
 	nVlSD1		:= 0
 	nQtSD2		:= 0
 	nVlSD2		:= 0
@@ -3470,6 +3052,9 @@ Static Function MATCPCalc(lRot)
 	nFecMovVl	:= 0
 	nFecMovOp	:= 0
 
+	// Zera valores do Kardex
+	aSize(aKarLocal, 0)
+
 	// Array com os campos utilizados na view da consulta de divergência de produtos
 	Aadd(aFields, {"FILIAL","C",TamSX3("B9_FILIAL")[1],0})
 	Aadd(aFields, {"COD","C",TamSX3("B9_COD")[1],0})
@@ -3478,7 +3063,9 @@ Static Function MATCPCalc(lRot)
 	Aadd(aFields, {"QUANT","N",TamSX3("B9_QINI")[1],TamSX3("B9_QINI")[2]})
 	Aadd(aFields, {"NUMSEQ","C",TamSX3("D1_NUMSEQ")[1],0})
 	Aadd(aFields, {"SEQCALC","C",TamSX3("D1_SEQCALC")[1],0})
-	Aadd(aFields, {"INICIAL","C",3,0})
+	Aadd(aFields, {"EMISSAO","D",TamSX3("D1_EMISSAO")[1],0})
+	Aadd(aFields, {"CF","C",TamSX3("D1_CF")[1],0})
+	Aadd(aFields, {"ALIAS","C",3,0})
 
 
 	IF !lRot
@@ -3496,8 +3083,13 @@ Static Function MATCPCalc(lRot)
 		lRet := .F.
 	EndIf
 
-	If lRet .And. (Empty(cProdAnAte) .OR. Empty(cProduto) )
+	If lRet .And. (Empty(cProdAnAte) .OR. (!lRot .AND. Empty(cProduto) ) )
 		MsgStop("Produto não informado. Verifique!")
+		lRet := .F.
+	EndIf
+
+	If lRet .And. (Empty(cLocAnAte) .OR. (!lRot .AND. Empty(cLocal) ) )
+		MsgStop("Armazém não informado. Verifique!")
 		lRet := .F.
 	EndIf
 
@@ -3542,8 +3134,9 @@ Static Function MATCPCalc(lRot)
 			Replace MATCTmpAn->ARMAZEM  With	QrySB2->B2_LOCAL
 			Replace MATCTmpAn->QUANT	With	aSaldIni[1]
 			Replace MATCTmpAn->CUSTO	With	aSaldIni[2]
-			nQtSB9 += aSaldIni[1]
-			nVLSB9 += aSaldIni[2]
+			Replace MATCTmpAn->ALIAS	With	"SB9"
+			//nQtSB9 += aSaldIni[1]
+			//nVLSB9 += aSaldIni[2]
 			msUnlock()
 			QrySB2->(DBSkip())
 		Enddo
@@ -3551,7 +3144,7 @@ Static Function MATCPCalc(lRot)
 
 		// Saldo Entradas
 		IncProc("Processando Saldo Entradas")
-		cQuery := " SELECT D1_FILIAL, D1_COD, D1_LOCAL, SUM(D1_CUSTO) AS SD1_CUSTO, SUM(D1_QUANT) AS SD1_QUANT, D1_SEQCALC AS SD1_SEQCALC, D1_NUMSEQ AS SD1_NUMSEQ  FROM "+RETSQLNAME("SD1")+", "+RETSQLNAME("SF4")
+		cQuery := " SELECT D1_FILIAL, D1_COD, D1_LOCAL, SUM(D1_CUSTO) AS SD1_CUSTO, SUM(D1_QUANT) AS SD1_QUANT, D1_SEQCALC AS SD1_SEQCALC, D1_NUMSEQ AS SD1_NUMSEQ, D1_TES AS SD1_TES, D1_EMISSAO AS SD1_EMISSAO  FROM "+RETSQLNAME("SD1")+", "+RETSQLNAME("SF4")
 		cQuery += " WHERE D1_COD BETWEEN '"+cProdAnDe+"' AND '"+cProdAnAte+"' "
 		cQuery += " AND D1_ORIGLAN <> 'LF' AND D1_DTDIGIT >= '"+DTOS(dIniAn)+"' AND D1_DTDIGIT <= '"+DTOS(dFIMAn)+"'"
 		cQuery += " AND D1_FILIAL = F4_FILIAL "
@@ -3568,7 +3161,7 @@ Static Function MATCPCalc(lRot)
 		EndIf
 		cQuery += " AND "+RETSQLNAME("SD1")+".D_E_L_E_T_ = ' '"
 		cQuery += " AND "+RETSQLNAME("SF4")+".D_E_L_E_T_ = ' '"
-		cQuery += " GROUP BY D1_FILIAL,D1_COD,D1_LOCAL, D1_SEQCALC, D1_NUMSEQ"
+		cQuery += " GROUP BY D1_FILIAL,D1_COD,D1_LOCAL, D1_SEQCALC, D1_NUMSEQ, D1_CF, D1_EMISSAO, D1_TES"
 		cQuery := ChangeQuery(cQuery)
 		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QryTSD1An",.F.,.T.)
 		While QryTSD1An->(!Eof())
@@ -3580,15 +3173,23 @@ Static Function MATCPCalc(lRot)
 			Replace MATCTmpAn->QUANT	With	QryTSD1An->SD1_QUANT
 			Replace MATCTmpAn->NUMSEQ	With	QryTSD1An->SD1_NUMSEQ
 			Replace MATCTmpAn->SEQCALC	With	QryTSD1An->SD1_SEQCALC
+			Replace MATCTmpAn->EMISSAO	With	STOD(QryTSD1An->SD1_EMISSAO)
+			Replace MATCTmpAn->CF	    With	QryTSD1An->SD1_TES
+			Replace MATCTmpAn->ALIAS	With	"SD1"
 
 			msUnlock()
+			nVlSD1 += QryTSD1An->SD1_CUSTO
+			nQtSD1 += QryTSD1An->SD1_QUANT
+			nTotEntQt += QryTSD1An->SD1_QUANT
+			//nQtSD1 := QryTSD1An->SD1_QUANT
+			//AAdd(aKarLocal,{STOD(QryTSD1An->EMISSAO), QryTSD1An->CF,QryTSD1An->LOCAL, QryTSD1An->NUMSEQ, QryTSD1An->SEQCALC, QryTSD1An->QUANT, Round(QryTSD1An->CUSTO,2),Round((QryTSD1An->CUSTO/QryTSD1An->QUANT),2),SPACE(10),SPACE(10),SPACE(10),10,10})
 			QryTSD1An->(DBSkip())
 		Enddo
 		QryTSD1An->(DBCloseArea())
 
 		// Saldo Movimentações Internas - Requisição
 		IncProc("Processando Saldo Movimentações Internas - Requisição")
-		cQuery := " SELECT D3_FILIAL, D3_COD, D3_LOCAL, D3_CF, SUM(D3_CUSTO1) AS SD3_CUSTO_R, SUM(D3_QUANT) AS SD3_QUANT_R, D3_NUMSEQ AS SD3_NUMSEQ, D3_SEQCALC AS SD3_SEQCALC  FROM "+RETSQLNAME("SD3")
+		cQuery := " SELECT D3_FILIAL AS SD3_FILIAL, D3_COD AS SD3_COD, D3_LOCAL AS SD3_LOCAL, D3_TM As SD3_TM,D3_EMISSAO AS SD3_EMISSAO,D3_CF AS SD3_CF, SUM(D3_CUSTO1) AS SD3_CUSTO_R, SUM(D3_QUANT) AS SD3_QUANT_R, D3_NUMSEQ AS SD3_NUMSEQ, D3_SEQCALC AS SD3_SEQCALC  FROM "+RETSQLNAME("SD3")
 		cQuery += " WHERE D3_COD BETWEEN '"+cProdAnDe+"' AND '"+cProdAnAte+"' "
 		cQuery += " AND D3_ESTORNO=' ' AND D3_EMISSAO >= '"+DTOS(dIniAn)+"' AND D3_EMISSAO <= '"+DTOS(dFIMAn)+"'"
 		//Complemento do Where da tabela SD3 (Tratamento Filial)
@@ -3599,30 +3200,33 @@ Static Function MATCPCalc(lRot)
 		EndIf
 		cQuery += " AND D3_CF IN('RE0','RE1','RE2','RE3','RE4','RE5','RE6','RE7')"
 		cQuery += " AND "+RETSQLNAME("SD3")+".D_E_L_E_T_ = ' '"
-		cQuery += "GROUP BY D3_FILIAL,D3_COD,D3_LOCAL, D3_SEQCALC, D3_NUMSEQ, D3_CF"
+		cQuery += "GROUP BY D3_FILIAL,D3_COD,D3_LOCAL, D3_SEQCALC, D3_NUMSEQ, D3_TM, D3_EMISSAO, D3_CF"
 		cQuery := ChangeQuery(cQuery)
 		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QryTSD3AnP",.F.,.T.)
 
 		While QryTSD3AnP->(!Eof())
-			IF !IsProdMOD(QryTSD3AnP->D3_COD) // Não processar produtos MOD / GGF
+			IF !IsProdMOD(QryTSD3AnP->SD3_COD) // Não processar produtos MOD / GGF
 				RecLock( "MATCTmpAn", .T. )
-				Replace MATCTmpAn->FILIAL	With	QryTSD3AnP->D3_FILIAL
-				Replace MATCTmpAn->COD    	With	QryTSD3AnP->D3_COD
-				Replace MATCTmpAn->ARMAZEM  With	QryTSD3AnP->D3_LOCAL
-				Replace MATCTmpAn->CUSTO	With	-(QryTSD3AnP->SD3_CUSTO_R)
-				Replace MATCTmpAn->QUANT	With	-(QryTSD3AnP->SD3_QUANT_R)
+				Replace MATCTmpAn->FILIAL	With	QryTSD3AnP->SD3_FILIAL
+				Replace MATCTmpAn->COD    	With	QryTSD3AnP->SD3_COD
+				Replace MATCTmpAn->ARMAZEM  With	QryTSD3AnP->SD3_LOCAL
+				Replace MATCTmpAn->CUSTO	With  -(QryTSD3AnP->SD3_CUSTO_R)
+				Replace MATCTmpAn->QUANT	With  -(QryTSD3AnP->SD3_QUANT_R)
 				Replace MATCTmpAn->NUMSEQ	With	QryTSD3AnP->SD3_NUMSEQ
 				Replace MATCTmpAn->SEQCALC	With	QryTSD3AnP->SD3_SEQCALC
+				Replace MATCTmpAn->EMISSAO	With	STOD(QryTSD3AnP->SD3_EMISSAO)
+				Replace MATCTmpAn->CF	    With	QryTSD3AnP->SD3_TM
+				Replace MATCTmpAn->ALIAS	With	"SD3"
 				/*IF QryTSD3AnP->D3_CF $ "RE0-RE1"
 					nVlRSD3 += QryTSD3AnP->SD3_CUSTO_R
 					nQtRSD3 += QryTSD3AnP->SD3_QUANT_R
 				ENDIF
 				*/
 				//Grava variáveis para apresentar os valores em tela
-				If SUBSTRING(QryTSD3AnP->D3_CF,1,2) = 'RE'
+				If SUBSTRING(QryTSD3AnP->SD3_CF,1,2) = 'RE'
 					nQtRSD3 +=  QryTSD3AnP->SD3_QUANT_R
 					nVlRSD3 +=  Round(QryTSD3AnP->SD3_CUSTO_R,aTamSD3[2])
-				ElseIf SUBSTRING(QryTSD3AnP->D3_CF,1,1) >= '5'
+				ElseIf SUBSTRING(QryTSD3AnP->SD3_CF,1,1) >= '5'
 					nQtSD2  +=  QryTSD3AnP->SD3_QUANT_R
 					nVlSD2  +=  Round(QryTSD3AnP->SD3_CUSTO_R,aTamSD3[2])
 				EndIf
@@ -3636,7 +3240,7 @@ Static Function MATCPCalc(lRot)
 
 		// Saldo Movimentações Internas - Producao e Devolução
 		IncProc("Processando Saldo Movimentações Internas - Producao")
-		cQuery := " SELECT D3_FILIAL, D3_COD, D3_LOCAL, D3_CF, SUM(D3_CUSTO1) AS SD3_CUSTO, SUM(D3_QUANT) AS SD3_QUANT, D3_NUMSEQ AS SD3_NUMSEQ, D3_SEQCALC AS SD3_SEQCALC FROM "+RETSQLNAME("SD3")
+		cQuery := " SELECT D3_FILIAL AS SD3_FILIAL, D3_COD AS SD3_COD, D3_LOCAL AS SD3_LOCAL, D3_TM As SD3_TM,D3_EMISSAO AS SD3_EMISSAO, SUM(D3_CUSTO1) AS SD3_CUSTO, D3_CF AS SD3_CF, SUM(D3_QUANT) AS SD3_QUANT, D3_NUMSEQ AS SD3_NUMSEQ, D3_SEQCALC AS SD3_SEQCALC FROM "+RETSQLNAME("SD3")
 		cQuery += " WHERE D3_COD BETWEEN '"+cProdAnDe+"' AND '"+cProdAnAte+"' "
 		cQuery += " AND D3_ESTORNO=' ' AND D3_EMISSAO >= '"+DTOS(dIniAn)+"' AND D3_EMISSAO <= '"+DTOS(dFIMAn)+"'"
 		//Complemento do Where da tabela SD3 (Tratamento Filial)
@@ -3647,23 +3251,29 @@ Static Function MATCPCalc(lRot)
 		EndIf
 		cQuery += " AND D3_CF IN('PR0','PR1','DE0','DE1','DE2','DE3','DE4','DE5','DE6','DE7') "
 		cQuery += " AND "+RETSQLNAME("SD3")+".D_E_L_E_T_ = ' '"
-		cQuery += "GROUP BY D3_FILIAL,D3_COD,D3_LOCAL, D3_SEQCALC, D3_NUMSEQ, D3_CF"
+		cQuery += "GROUP BY D3_FILIAL,D3_COD,D3_LOCAL, D3_SEQCALC, D3_NUMSEQ, D3_TM, D3_EMISSAO, D3_CF"
 		cQuery := ChangeQuery(cQuery)
 		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QryTSD3An",.F.,.T.)
 
 		While QryTSD3An->(!Eof())
-			IF !IsProdMOD(QryTSD3An->D3_COD) // Não processar produtos MOD / GGF
+			IF !IsProdMOD(QryTSD3An->SD3_COD) // Não processar produtos MOD / GGF
 				RecLock( "MATCTmpAn", .T. )
-				Replace MATCTmpAn->FILIAL	With	QryTSD3An->D3_FILIAL
-				Replace MATCTmpAn->COD    	With	QryTSD3An->D3_COD
-				Replace MATCTmpAn->ARMAZEM  With	QryTSD3An->D3_LOCAL
+				Replace MATCTmpAn->FILIAL	With	QryTSD3An->SD3_FILIAL
+				Replace MATCTmpAn->COD    	With	QryTSD3An->SD3_COD
+				Replace MATCTmpAn->ARMAZEM  With	QryTSD3An->SD3_LOCAL
 				Replace MATCTmpAn->CUSTO	With	QryTSD3An->SD3_CUSTO
 				Replace MATCTmpAn->QUANT	With	QryTSD3An->SD3_QUANT
 				Replace MATCTmpAn->NUMSEQ	With	QryTSD3An->SD3_NUMSEQ
 				Replace MATCTmpAn->SEQCALC	With	QryTSD3An->SD3_SEQCALC
-				IF QryTSD3An->D3_CF $ "DE0-DE1"
+				Replace MATCTmpAn->EMISSAO	With	STOD(QryTSD3An->SD3_EMISSAO)
+				Replace MATCTmpAn->CF	    With	QryTSD3An->SD3_TM
+				Replace MATCTmpAn->ALIAS	With	"SD3"
+				IF QryTSD3An->SD3_CF $ "DE0-DE1" // devoluções
 					nQtDSD3 += QryTSD3An->SD3_QUANT
 					nVlDSD3 += QryTSD3An->SD3_CUSTO
+				ELSEIF QryTSD3An->SD3_CF $ "PR0-PR1"  // produções
+					nQtPSD3 += QryTSD3An->SD3_QUANT
+					nVlPSD3 += QryTSD3An->SD3_CUSTO
 				ENDIF
 				msUnlock()
 			END
@@ -3673,7 +3283,7 @@ Static Function MATCPCalc(lRot)
 
 		// Saldo Saídas
 		IncProc("Processando Saldo Saídas")
-		cQuery := " SELECT D2_FILIAL, D2_COD, D2_LOCAL, SUM(D2_CUSTO1) AS SD2_CUSTO, SUM(D2_QUANT) AS SD2_QUANT, D2_NUMSEQ AS SD2_NUMSEQ, D2_SEQCALC AS SD2_SEQCALC FROM "+RETSQLNAME("SD2")+", "+RETSQLNAME("SF4")
+		cQuery := " SELECT D2_FILIAL AS SD3_FILIAL, D2_COD AS SD3_COD, D2_LOCAL AS SD3_LOCAL,D2_EMISSAO AS SD2_EMISSAO, D2_TES AS SD2_TES, SUM(D2_CUSTO1) AS SD2_CUSTO, SUM(D2_QUANT) AS SD2_QUANT, D2_NUMSEQ AS SD2_NUMSEQ, D2_SEQCALC AS SD2_SEQCALC FROM "+RETSQLNAME("SD2")+", "+RETSQLNAME("SF4")
 		cQuery += " WHERE D2_COD BETWEEN '"+cProdAnDe+"' AND '"+cProdAnAte+"' "
 		cQuery += " AND D2_ORIGLAN <> 'LF' AND D2_EMISSAO >= '"+DTOS(dIniAn)+"' AND D2_EMISSAO <= '"+DTOS(dFIMAn)+"'"
 		cQuery += " AND D2_TES=F4_CODIGO AND F4_ESTOQUE = 'S' "
@@ -3689,19 +3299,24 @@ Static Function MATCPCalc(lRot)
 		EndIf
 		cQuery += " AND "+RETSQLNAME("SD2")+".D_E_L_E_T_ = ' '"
 		cQuery += " AND "+RETSQLNAME("SF4")+".D_E_L_E_T_ = ' '"
-		cQuery += " GROUP BY D2_FILIAL,D2_COD,D2_LOCAL, D2_SEQCALC, D2_NUMSEQ"
+		cQuery += " GROUP BY D2_FILIAL,D2_COD,D2_LOCAL, D2_SEQCALC, D2_NUMSEQ, D2_TES, D2_EMISSAO"
 		cQuery := ChangeQuery(cQuery)
 		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QryTSD2An",.F.,.T.)
 		While QryTSD2An->(!Eof())
 			RecLock( "MATCTmpAn", .T. )
-			Replace MATCTmpAn->FILIAL	With	QryTSD2An->D2_FILIAL
-			Replace MATCTmpAn->COD    	With	QryTSD2An->D2_COD
-			Replace MATCTmpAn->ARMAZEM  With	QryTSD2An->D2_LOCAL
+			Replace MATCTmpAn->FILIAL	With	QryTSD2An->SD2_FILIAL
+			Replace MATCTmpAn->COD    	With	QryTSD2An->SD2_COD
+			Replace MATCTmpAn->ARMAZEM  With	QryTSD2An->SD2_LOCAL
 			Replace MATCTmpAn->CUSTO	With	-(QryTSD2An->SD2_CUSTO)
 			Replace MATCTmpAn->QUANT	With	-(QryTSD2An->SD2_QUANT)
 			Replace MATCTmpAn->NUMSEQ	With	QryTSD2An->SD2_NUMSEQ
 			Replace MATCTmpAn->SEQCALC	With	QryTSD2An->SD2_SEQCALC
+			Replace MATCTmpAn->EMISSAO	With	STOD(QryTSD2An->SD2_EMISSAO)
+			Replace MATCTmpAn->CF	    With	QryTSD2An->SD2_TES
+			Replace MATCTmpAn->ALIAS	With	"SD2"
 			msUnlock()
+			nVlSD2 += QryTSD2An->SD2_CUSTO
+			nQtSD2 += QryTSD2An->SD2_QUANT
 			QryTSD2An->(DBSkip())
 		Enddo
 		QryTSD2An->(DBCloseArea())
@@ -3720,7 +3335,35 @@ Static Function MATCPCalc(lRot)
 		DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QrySB2An",.F.,.T.)
 		IncProc("Processando Saldo Fechamento x Movimento")
 		While QrySB2An->(!Eof())
-
+			//Calcula o custo das OPs
+			aCusOp := CalcCusOP(QrySB2An->B2_COD, QrySB2An->B2_COD, QrySB2An->B2_LOCAL, QrySB2An->B2_LOCAL, dDataI, dFIMAn)
+			nFecVlOpSB2 := 0
+			nFecMovOp   := 0
+			//aCusOp := {}
+    		//For para montar o custo das OPs do produto
+			FOR nCont := 1 TO LEN(aCusOp)
+				nVlOpSB9    += aCusOp[nCont][2]
+				nFecVlOpSB2 += aCusOp[nCont][3]
+				nFecMovOp   += aCusOp[nCont][4]
+			NEXT nCont
+			//Função para montagem do Kardex
+			Kardex(QrySB2An->B2_FILIAL, QrySB2An->B2_COD, QrySB2An->B2_LOCAL)
+			/*
+			//Montagem do array do kardex
+			cQuery := " SELECT TMP.FILIAL, TMP.COD, TMP.ARMAZEM, TMP.CUSTO, TMP.QUANT, TMP.CF, TMP.EMISSAO, TMP.SEQCALC, TMP.NUMSEQ, TMP.ALIAS FROM "+oTempTable:GetRealName()+" TMP"
+			cQuery += " WHERE TMP.FILIAL = '"+QrySB2An->B2_FILIAL+"' AND TMP.COD = '"+QrySB2An->B2_COD+"' AND TMP.ARMAZEM = '"+QrySB2An->B2_LOCAL+"' "
+			cQuery += " AND TMP.D_E_L_E_T_ = ' '"
+			//cQuery += " GROUP BY TMP.FILIAL, TMP.COD, TMP.ARMAZEM"
+			cQuery := ChangeQuery(cQuery)
+			DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QryKardex",.F.,.T.)
+			While QryKardex->(!Eof())
+				IF QryKardex->ALIAS != 'SB9'
+					AAdd(aKarLocal,{STOD(QryKardex->EMISSAO), QryKardex->CF,QryKardex->ARMAZEM, QryKardex->NUMSEQ, QryKardex->SEQCALC, QryKardex->QUANT, Round(QryKardex->CUSTO,2),Round((QryKardex->CUSTO/QryKardex->QUANT),2),SPACE(10),SPACE(10),SPACE(10),10,10})
+				ENDIF
+				QryKardex->(DBSkip())
+			ENDDO
+			QryKardex->(DBCloseArea())
+			*/
 			IncProc("Processando Saldo Fechamento x Movimento")
 			// Faz um select na tabela temporaria para comparar os valores das movimentações com o valor do fechamento (SB2)
 			cQuery := " SELECT TMP.FILIAL, TMP.COD, TMP.ARMAZEM, SUM(TMP.CUSTO) AS CUSTO, SUM(TMP.QUANT) AS QUANT FROM "+oTempTable:GetRealName()+" TMP"
@@ -3731,17 +3374,6 @@ Static Function MATCPCalc(lRot)
 			DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QryTempDB",.F.,.T.)
 			While QryTempDB->(!Eof())
 				// Verifica se a diferença no valor do movimento x fechamento
-				//Calcula o custo das OPs
-				aCusOp := CalcCusOP(QryTempDB->COD, QryTempDB->COD, QryTempDB->ARMAZEM, QryTempDB->ARMAZEM, dDataI, dFIMAn)
-				nFecVlOpSB2 := 0
-				nFecMovOp   := 0
-				//aCusOp := {}
-    			//For para montar o custo das OPs do produto
-				FOR nCont := 1 TO LEN(aCusOp)
-					nVlOpSB9    += aCusOp[nCont][2]
-					nFecVlOpSB2 += aCusOp[nCont][3]
-					nFecMovOp   += aCusOp[nCont][4]
-				NEXT nCont
 
 				//Mesmo o custo sendo por filial faz o cálculo do custo de apenas 1 armazém
 				IF SuperGetMv("MV_CUSFIL",.F.,"A") == "F"
@@ -3751,14 +3383,14 @@ Static Function MATCPCalc(lRot)
 					cQuery += " GROUP BY TMP.FILIAL, TMP.COD"
 					cQuery := ChangeQuery(cQuery)
 					DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QrySB2FIL",.F.,.T.)
-					//cQuery += "AND TMP.ARMAZEM = '"+QrySB2FIL->B2_LOCAL+"'
-					nValFin       := ROUND((QrySB2FIL->CUSTO / QrySB2FIL->QUANT) * QryTempDB->QUANT, TAMSX3("B2_VATU1")[2])
-					nFecVlSB2     := Round(QrySB2An->B2_VFIM1,TAMSX3("B2_VATU1")[2])
-					nFecMovVl     := nValFin
-					nFecQtSB2     := QrySB2An->B2_QFIM
-					nFecMovQt     := QryTempDB->QUANT
-					nFecVlOpSB2   += Round(nFecVlOpSB2,TAMSX3("B2_QATU")[2])
-					nVlOpSB9      += Round(nFecMovOp,TAMSX3("B2_QATU")[2])
+						//cQuery += "AND TMP.ARMAZEM = '"+QrySB2FIL->B2_LOCAL+"'
+						nValFin       := ROUND((QrySB2FIL->CUSTO / QrySB2FIL->QUANT) * QryTempDB->QUANT, TAMSX3("B2_VATU1")[2])
+						nFecVlSB2     := Round(QrySB2An->B2_VFIM1,TAMSX3("B2_VATU1")[2])
+						nFecMovVl     := nValFin
+						nFecQtSB2     := QrySB2An->B2_QFIM
+						nFecMovQt     := QryTempDB->QUANT
+						nFecVlOpSB2   += Round(nFecVlOpSB2,TAMSX3("B2_QATU")[2])
+						nVlOpSB9      += Round(nFecMovOp,TAMSX3("B2_QATU")[2])
 					QrySB2FIL->(DBCloseArea())
 				ELSE
 					nValFin := Round(QryTempDB->CUSTO,TAMSX3("B2_VATU1")[2])
@@ -3768,6 +3400,7 @@ Static Function MATCPCalc(lRot)
 					nFecMovQt := QryTempDB->QUANT
 
 				END
+
 
 				If (nValFin <> Round(QrySB2An->B2_VFIM1,TAMSX3("B2_VATU1")[2])) .Or. (QryTempDB->QUANT <> QrySB2An->B2_QFIM) .or. (Round(nFecVlOpSB2,TAMSX3("B2_QATU")[2]) <> Round(nFecMovOp,TAMSX3("B2_QATU")[2]))
 					AAdd(aProdAn,{QrySB2An->B2_FILIAL,QrySB2An->B2_COD,QrySB2An->B2_LOCAL,"DIVERGENTE"})
@@ -4260,5 +3893,78 @@ Static Function ListBox (aProdAn)
 		EndIf
 	Next
 	bLine += "} }"
+
+Return
+
+
+/*Função para montar as movimentações do Kardex*/
+/*       Criado po Wagner Lima 13/02/2020      */
+
+STATIC Function Kardex(Filial, Produto, local)
+Local cFil       := Filial
+Local cProduto   := Produto
+Local clocal     := local
+Local cQuery     := ""
+Local nQtdTot    := 0
+Local nValTot    := 0
+Local nVal       := 0
+Local nQtMov     := 0
+Local nTamCM     := TamSX3("B2_CM1")[2]
+Local nTamQTD    := TamSX3("B2_QATU")[2]
+Local nTamVAl    := TamSX3("B2_VATU1")[2]
+nTotSaiQT  := 0
+nTotSaiVal := 0
+nTotEntQt  := 0
+nTotEntVal := 0
+
+nQtSB9 := 0
+nVLSB9 := 0
+	//Montagem do array do kardex
+	cQuery := " SELECT TMP.FILIAL, TMP.COD, TMP.ARMAZEM, TMP.CUSTO, TMP.QUANT, TMP.CF, TMP.EMISSAO, TMP.SEQCALC, TMP.NUMSEQ, TMP.ALIAS FROM "+oTempTable:GetRealName()+" TMP"
+	cQuery += " WHERE TMP.FILIAL = '"+cFil+"' AND TMP.COD = '"+cProduto+"' AND TMP.ARMAZEM = '"+clocal+"' "
+	cQuery += " AND TMP.D_E_L_E_T_ = ' '"
+	//cQuery += " GROUP BY TMP.FILIAL, TMP.COD, TMP.ARMAZEM"
+	cQuery := ChangeQuery(cQuery)
+	DBUseArea(.T.,"TOPCONN",TCGENQRY(,,cQuery),"QryKardex",.F.,.T.)
+	While QryKardex->(!Eof())
+		IF QryKardex->ALIAS != 'SB9'
+			IF VAL(QryKardex->CF) > 500
+				//Se o valor for negativo transforma em positivo
+				IF QryKardex->QUANT < 0
+					nQtdTot -= ROUND((QryKardex->QUANT * -1),nTamQTD)
+					nQtMov  := ROUND((QryKardex->QUANT * -1),nTamQTD)
+				ENDIF
+				//Se o valor for negativo transforma em positivo
+				IF QryKardex->CUSTO < 0
+					nValTot -= (Round(QryKardex->CUSTO,nTamVAl) * -1)
+					nVal    := (Round(QryKardex->CUSTO,nTamVAl) * -1)
+				ENDIF
+				nTotSaiQT  := nQtMov
+				nTotSaiVal := nVal
+				AAdd(aKarLocal,{STOD(QryKardex->EMISSAO), QryKardex->CF,QryKardex->ARMAZEM, QryKardex->NUMSEQ, QryKardex->SEQCALC, 0.00, val(Space(10)),Round((QryKardex->CUSTO/QryKardex->QUANT),nTamCM), nQtMov, nVal,SPACE(10),nQtdTot,nValTot})
+			ELSE
+				nQtdTot += Round(QryKardex->QUANT,nTamQTD)
+				nQtMov  := Round(QryKardex->QUANT,nTamQTD)
+				nValTot += Round(QryKardex->CUSTO,nTamVAl)
+				nVal    := Round(QryKardex->CUSTO,nTamVAl)
+				nTotEntQt  += nQtMov
+				nTotEntVal += nVal
+				AAdd(aKarLocal,{STOD(QryKardex->EMISSAO), QryKardex->CF,QryKardex->ARMAZEM, QryKardex->NUMSEQ, QryKardex->SEQCALC, nQtMov, nVal,Round((QryKardex->CUSTO/QryKardex->QUANT),nTamCM),val(Space(10)),val(Space(10)),val(Space(10)),nQtdTot,nValTot})
+			END
+		Else
+			//Saldos iniciais do kardex
+			nQtSB9 += QryKardex->QUANT
+			nVLSB9 += QryKardex->CUSTO
+			nQtdTot += nQtSB9
+			nValTot += nVLSB9
+		ENDIF
+		QryKardex->(DBSkip())
+	ENDDO
+	// Carrega os campos de totais
+	nFecMovQt := nQtdTot
+	nFecMovVl := nValTot
+
+	QryKardex->(DBCloseArea())
+	oListCusto:Refresh()
 
 Return
